@@ -16,13 +16,16 @@ function init(){
 						controls.minPolarAngle = 0; // radians
 						controls.maxPolarAngle = Math.PI*2
 
-	camera.position.z = 5;
+	camera.position.z = 1;
 }
 
 var geometry = new THREE.BoxGeometry( 1, 1, 1 );
-var material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+var material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
 var cube = new THREE.Mesh( geometry, material );
 scene.add( cube );
+
+var light = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
+scene.add( light );
 
 function render(){
 	requestAnimationFrame( render );
