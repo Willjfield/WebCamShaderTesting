@@ -14,7 +14,7 @@ function init(){
 						controls.minPolarAngle = 0; // radians
 						controls.maxPolarAngle = Math.PI*2
 
-	camera.position.z = 1;
+	camera.position.z = -25;
 }
 
 var geometry = new THREE.BoxGeometry( 10, 10, 10 );
