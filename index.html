@@ -9,7 +9,7 @@
 		<script type="x-shader/x-vertex" id="vertexShader">
 			varying vec2 vUv;
 			  varying vec3 vNormal;
-			  varying vec4 vPosition;
+			  varying vec3 vPosition;
 			  uniform sampler2D webcam;
 		
 			  void main()
@@ -26,19 +26,19 @@
 			     newVertex.x += texel.z*2.;
 			     //gl_Position = ProjectionModelviewMatrix * newVertex;
 			    gl_Position = projectionMatrix * mvPosition + vec4(newVertex,1.0);
-			    vPosition = gl_Position;
+			    vPosition = newVertex;
 			  }
 		</script>
 		<script type="x-shader/x-fragment" id="fragmentShader">
 			uniform sampler2D webcam;
 			varying vec2 vUv;
 			varying vec3 vNormal;
-			varying vec4 vPosition;
+			varying vec3 vPosition;
 			void main( void ) {     		
 				vec3 camColor = texture2D( webcam, vUv ).rgb;
 				vec3 lightPosition = vec3(1.,0.,0.2);
 				float lightness = dot(normalize(lightPosition),vNormal)+1./2.;
-				gl_FragColor = vec4( vec3(1.,1.,1.)*(vPosition.z-10.9), 1.0 );
+				gl_FragColor = vec4( vec3(1.,1.,1.)*vPosition.z, 1.0 );
 			}
 		</script>
 		<script src="js/script.js"></script>
