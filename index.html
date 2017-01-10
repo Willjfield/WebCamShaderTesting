@@ -6,6 +6,41 @@
 		<script src="js/lib/jquery-3.1.1.min.js"></script>
 	</head>
 	<body>
+		<script type="x-shader/x-vertex" id="vertexShader">
+			varying vec2 vUv;
+			  varying vec3 vNormal;
+			  varying vec4 vPosition;
+			  uniform sampler2D webcam;
+		
+			  void main()
+			  {
+			  	vec3 camColor = texture2D( webcam, vUv ).rgb;
+			    vUv = uv;
+			    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+			    vNormal = normal;
+
+			     vec4 texel;
+			     //Read the texture offset. Offset in the z direction only
+			     texel = texture2DLod( webcam, vUv , 0.0);
+			     vec3 newVertex = vec3(1.,1.,1.);
+			     newVertex.x += texel.z*2.;
+			     //gl_Position = ProjectionModelviewMatrix * newVertex;
+			    gl_Position = projectionMatrix * mvPosition + vec4(newVertex,1.0);
+			    vPosition = gl_Position;
+			  }
+		</script>
+		<script type="x-shader/x-fragment" id="fragmentShader">
+			uniform sampler2D webcam;
+			varying vec2 vUv;
+			varying vec3 vNormal;
+			varying vec4 vPosition;
+			void main( void ) {     		
+				vec3 camColor = texture2D( webcam, vUv ).rgb;
+				vec3 lightPosition = vec3(1.,0.,0.2);
+				float lightness = dot(normalize(lightPosition),vNormal)+1./2.;
+				gl_FragColor = vec4( vec3(1.,1.,1.)*(vPosition.z-10.9), 1.0 );
+			}
+		</script>
 		<script src="js/script.js"></script>
 	</body>
 </html>
