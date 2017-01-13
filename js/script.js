@@ -44,7 +44,7 @@ function threeRender(video) {
 
 var scene = new THREE.Scene();
 
-var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+var camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 );
 var renderer = new THREE.WebGLRenderer();
 
 renderer.setSize( window.innerWidth, window.innerHeight );
@@ -79,7 +79,7 @@ var plane = new THREE.Mesh( geometry, material );
 //plane.rotation.y = Math.PI/4;
 scene.add( plane );
 camera.position.z = 10;
-camera.position.y = 1;
+//camera.position.y = 1;
 
 var light = new THREE.AmbientLight( 'rgb(255,255,255)' ); // soft white light
 scene.add( light );
