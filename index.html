@@ -2,70 +2,55 @@
 	<head>
 		<link rel="stylesheet" type="text/css" href="style/style.css">
 		<script src="js/lib/three.min.js"></script>
-		<script type="text/javascript" src="js/lib/OBJLoader.js"></script>
+		<!-- <script type="text/javascript" src="js/lib/OBJLoader.js"></script>
 		<script src="js/lib/OrbitControls.js"></script>
-		<script src="js/lib/jquery-3.1.1.min.js"></script>
+		<script src="js/lib/jquery-3.1.1.min.js"></script> -->
 	</head>
 	<body>
-		<script type="x-shader/x-vertex" id="vertexShader">
-			varying vec2 vUv;
-			  varying vec3 vNormal;
-			  varying vec3 vPosition;
-			  uniform sampler2D webcam;
-		
-			  void main()
-			  {
-			  	vUv = uv;
-			  	vec3 camColor = texture2D( webcam, vUv ).rgb;
-			    
-			    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-			    vNormal = normal;
-
-			     vec4 texel;
-			     //Read the texture offset. Offset in the z direction only
-			     texel = texture2DLod( webcam, vUv , 0.0);
-			     vec3 newVertex = vec3(1.,1.,1.);
-			     float brightness = (camColor.r+camColor.g+camColor.b)/3.;
-			     newVertex.x += brightness*100.;
-			     //gl_Position = projectionMatrix * mvPosition;
-			    gl_Position = projectionMatrix * mvPosition + vec4(newVertex,1.0);
-			    vPosition = newVertex;
-			  }
-		</script>
-		<script type="x-shader/x-fragment" id="fragmentShader">
-		float map(float x, float in_min, float in_max, float out_min, float out_max)
-		{
-		  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-		}
-
-			uniform sampler2D webcam;
-			uniform float vTime;
+		<div id="container"></div>
+		<script id="vertexShader" type="x-shader/x-vertex">
 			varying vec2 vUv;
 			varying vec3 vNormal;
 			varying vec3 vPosition;
-			void main( void ) {     		
-				vec3 camColor = texture2D( webcam, vec2(vUv.x,1.-vUv.y) ).rgb;
+	        void main() {
+	        	vUv = uv;
+			    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+			    vNormal = normal;
 
-				float rOffset = camColor.r;
-				float gOffset = map(camColor.g,0.,1.,0.,0.707106781186548);
-				float bOffset = map(camColor.b,0.,1.,0.,0.707106781186548);
-				
-				float redComp = texture2D( webcam, vUv+vec2(0.,rOffset) ).r;
-				float greenComp = texture2D( webcam, vUv+vec2(gOffset,-gOffset) ).g;
-				float blueComp = texture2D( webcam, vUv+vec2(-bOffset,-bOffset) ).b;
-				vec3 newCamColor = vec3(redComp,greenComp,blueComp);
-				// vec2 redSample = vec2(0.,rOffset);
-				// vec2 greenSample = vec2(gOffset,-gOffset);
-				// vec2 blueSample = vec2(-bOffset,-bOffset);
+	            gl_Position = vec4( position, 1.0 );
+	        }
+	    </script>
+	    <script id="fragmentShader" type="x-shader/x-fragment">
+	        uniform vec2 u_resolution;
+	        uniform vec2 u_mouse;
+	        uniform float u_time;
+	        uniform sampler2D webcam;
 
-				//vec2 combinedOffset = (redSample+greenSample+blueSample)/5.;
-
-				//vec3 newCamColor = texture2D( webcam, vUv+combinedOffset).rgb;
-				vec3 lightPosition = vec3(1.,0.,0.2);
-				float lightness = (dot(normalize(lightPosition),vec3(vNormal.x,vNormal.y,vNormal.z)+1.)/2.);
-				gl_FragColor = vec4( newCamColor.rgb*lightness, 1.0 );
-			}
-		</script>
+			varying vec2 vUv;
+			varying vec3 vNormal;
+			varying vec3 vPosition;
+	        void main() {
+	        	
+	        	// vec3 camColor =texImage2D(webcam, 0, internalformat, width, height, border, format, type, ArrayBufferView? pixels)
+	            vec2 st = gl_FragCoord.xy/u_resolution.xy;
+	            // Each result will return 1.0 (white) or 0.0 (black).
+	      //       float tileNumber = 5.;
+	      //       float lineWidth = .025;
+			    // float left = step(lineWidth,fract(st.x*tileNumber));   // Similar to ( X greater than 0.1 )
+			    // float bottom = step(lineWidth,fract(st.y*tileNumber)); // Similar to ( Y greater than 0.1 )
+			    // float right = step(lineWidth,fract(1.-st.x*tileNumber));   // Similar to ( X greater than 0.1 )
+			    // float top = step(lineWidth,fract(1.-st.y*tileNumber)); // Similar to ( Y greater than 0.1 )
+			    // vec4 bl = vec4( left * bottom );
+			    // vec4 tr = vec4( right * top );
+			    st = st*2.-1.;
+			    float d = length( abs(st)-1. )*sin(u_time/10.)*2.;
+			    vec2 sampImg = vUv;
+			    sampImg.x = cos(sampImg.x);
+			    sampImg.y = sin(sampImg.y);
+			    vec3 camColor = texture2D( webcam, fract(vUv+d)-.2 ).rgb;
+	            gl_FragColor=vec4(camColor,1.0)*(vec4(st.x+d,st.y+d,1.,0.0));
+	        }
+	    </script>
 		<script src="js/script.js"></script>
 	</body>
 </html>
