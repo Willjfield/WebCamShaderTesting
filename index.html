@@ -21,34 +21,34 @@
 	        }
 	    </script>
 	    <script id="fragmentShader" type="x-shader/x-fragment">
-	        uniform vec2 u_resolution;
-	        uniform vec2 u_mouse;
-	        uniform float u_time;
 	        uniform sampler2D webcam;
+
+	        uniform vec2 u_resolution;
+			//uniform vec2 c;
+			//uniform int iter;
 
 			varying vec2 vUv;
 			varying vec3 vNormal;
 			varying vec3 vPosition;
 	        void main() {
-	        	
-	        	// vec3 camColor =texImage2D(webcam, 0, internalformat, width, height, border, format, type, ArrayBufferView? pixels)
-	            vec2 st = gl_FragCoord.xy/u_resolution.xy;
-	            // Each result will return 1.0 (white) or 0.0 (black).
-	      //       float tileNumber = 5.;
-	      //       float lineWidth = .025;
-			    // float left = step(lineWidth,fract(st.x*tileNumber));   // Similar to ( X greater than 0.1 )
-			    // float bottom = step(lineWidth,fract(st.y*tileNumber)); // Similar to ( Y greater than 0.1 )
-			    // float right = step(lineWidth,fract(1.-st.x*tileNumber));   // Similar to ( X greater than 0.1 )
-			    // float top = step(lineWidth,fract(1.-st.y*tileNumber)); // Similar to ( Y greater than 0.1 )
-			    // vec4 bl = vec4( left * bottom );
-			    // vec4 tr = vec4( right * top );
-			    st = st*2.-1.;
-			    float d = length( abs(st)-1. )*sin(u_time/10.)*2.;
-			    vec2 sampImg = vUv;
-			    sampImg.x = cos(sampImg.x);
-			    sampImg.y = sin(sampImg.y);
-			    vec3 camColor = texture2D( webcam, fract(vUv+d)-.2 ).rgb;
-	            gl_FragColor=vec4(camColor,1.0)*(vec4(st.x+d,st.y+d,1.,0.0));
+	        	vec2 c = vec2(.6,.15);
+	        	int iter = 32;
+	            vec2 z = gl_FragCoord.xy/u_resolution.xy;
+			    vec3 camColorRegular = texture2D( webcam, vUv).rgb;
+			    int j;
+			    for(int i=0; i<64; i++) {
+			    	j=i;
+			        float x = (z.x * z.x - z.y * z.y) + c.x;
+			        float y = (z.y * z.x + z.x * z.y) + c.y;
+
+			        if((x * x + y * y) > 4.0) break;
+			        z.x = x;
+			        z.y = y;
+			    }
+
+			    vec3 camColor = texture2D( webcam, vec2(j == iter ? 0.0 : float(j) / 100.0,.5)).rgb;
+			    vec3 output_Color = mix(camColor,camColorRegular,.15);
+			    gl_FragColor = vec4(output_Color,1.0);
 	        }
 	    </script>
 		<script src="js/script.js"></script>
