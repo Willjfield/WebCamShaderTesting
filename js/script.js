@@ -97,13 +97,15 @@ var loader = new THREE.OBJLoader( );
           } );
           object.children[0].material.needsUpdate = true;
           teapot = object;
-          teapot.position.z = -200;
+          teapot.position.z = -100;
+          teapot.position.x = -50;
           scene.add( teapot );
-
         });
-camera.position.z = 15;
-camera.position.y = 25;
-camera.position.x = 25;
+        
+camera.position.z = 100;
+camera.position.y = 100;
+camera.rotation.x = -.25;
+//camera.position.x = 25;
 
 var light = new THREE.AmbientLight( 'rgb(255,255,255)' ); // soft white light
 scene.add( light );
@@ -124,6 +126,59 @@ spotLight.shadow.camera.far = 4000;
 spotLight.shadow.camera.fov = 30;
 scene.add( spotLight );
 
+ // geometrys
+var geos={};
+var mats={};
+var materialType = 'MeshBasicMaterial';
+var ToRad = 0.0174532925199432957;
+var grounds = [];
+function basicTexture(n){
+    var canvas = document.createElement( 'canvas' );
+    canvas.width = canvas.height = 64;
+    var ctx = canvas.getContext( '2d' );
+    var color;
+    if(n===0) color = "#3884AA";// sphere58AA80
+    if(n===1) color = "#61686B";// sphere sleep
+    if(n===2) color = "#AA6538";// box
+    if(n===3) color = "#61686B";// box sleep
+    if(n===4) color = "#AAAA38";// cyl
+    if(n===5) color = "#61686B";// cyl sleep
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 64, 64);
+    ctx.fillStyle = "rgba(0,0,0,0.2)";
+    ctx.fillRect(0, 0, 32, 32);
+    ctx.fillRect(32, 32, 32, 32);
+    var tx = new THREE.Texture(canvas);
+    tx.needsUpdate = true;
+    return tx;
+}
+
+geos['sphere'] = new THREE.BufferGeometry().fromGeometry( new THREE.SphereGeometry(1,16,10));
+geos['box'] = new THREE.BufferGeometry().fromGeometry( new THREE.BoxGeometry(1,1,1));
+geos['cylinder'] = new THREE.BufferGeometry().fromGeometry(new THREE.CylinderGeometry(1,1,1));
+// materials
+mats['sph']    = new THREE[materialType]( {shininess: 10, map: basicTexture(0), name:'sph' } );
+mats['box']    = new THREE[materialType]( {shininess: 10, map: basicTexture(2), name:'box' } );
+mats['cyl']    = new THREE[materialType]( {shininess: 10, map: basicTexture(4), name:'cyl' } );
+mats['ssph']   = new THREE[materialType]( {shininess: 10, map: basicTexture(1), name:'ssph' } );
+mats['sbox']   = new THREE[materialType]( {shininess: 10, map: basicTexture(3), name:'sbox' } );
+mats['scyl']   = new THREE[materialType]( {shininess: 10, map: basicTexture(5), name:'scyl' } );
+mats['ground'] = new THREE[materialType]( {shininess: 10, color:0x3D4143, transparent:true, opacity:0.5 } );
+
+function addStaticBox(size, position, rotation) {
+        var mesh = new THREE.Mesh( geos.box, mats.ground );
+        mesh.scale.set( size[0], size[1], size[2] );
+        mesh.position.set( position[0], position[1], position[2] );
+        mesh.rotation.set( rotation[0]*ToRad, rotation[1]*ToRad, rotation[2]*ToRad );
+        scene.add( mesh );
+        grounds.push(mesh);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+}
+
+addStaticBox([40, 40, 390], [-180,20,0], [0,0,0]);
+addStaticBox([40, 40, 390], [180,20,0], [0,0,0]);
+addStaticBox([400, 80, 400], [0,-40,0], [0,0,0]);
 
 
 //render the scene
