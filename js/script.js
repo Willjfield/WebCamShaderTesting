@@ -103,6 +103,6 @@ function animate() {
 }
 
 function render() {
-    uniforms.u_time.value += 0.05;
+    uniforms.u_time.value += 0.005;
     renderer.render( scene, camera );
 }
