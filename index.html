@@ -123,30 +123,96 @@
 
 			    
 			    //vec3 output_Color = mix(camColor,camColorRegular,.15);
-			    float detail = 3.;
-			    float noiseValue = snoise(vec3(vUv.x*detail,u_time,vUv.y*detail));
+			    float detail1 = 5.;
+			    float detail2 = 20.;
+			    float detail3 = 2.;
+			    float noiseValue1 = snoise(vec3(vUv.x*detail1,u_time,vUv.y*detail1));
+			    float noiseValue2 = snoise(vec3(vUv.x*detail2,u_time+500.,vUv.y*detail2));
+			    float noiseValue3 = snoise(vec3(vUv.x*detail3,u_time+200.,vUv.y*detail3));
 
-			    noiseValue = pow(noiseValue,3.);
-			    vec3 camColor = texture2D( webcam, vec2(vUv.x+(noiseValue*50./u_resolution.x),vUv.y+(noiseValue*50./u_resolution.y))).rgb;
-			    float lineColor = 0.;
-			    vec4 output_Color;// = vec3(0.);
-			    if(noiseValue > 0.01 && noiseValue<.5){
-			    	output_Color = vec4(0.,0.,0.,.0);
+			    noiseValue1 = pow(noiseValue1,2.);
+			    noiseValue2 = pow(noiseValue2,2.);
+			    noiseValue3 = pow(noiseValue2,2.);
+			    // vec3 camColor = texture2D( webcam, vec2(vUv.x+(noiseValue*50./u_resolution.x),vUv.y+(noiseValue*50./u_resolution.y))).rgb;
+			    // float lineColor = 0.;
+			    // vec4 output_Color;// = vec3(0.);
+			    // if(noiseValue > 0.01 && noiseValue<.5){
+			    // 	output_Color = vec4(0.,0.,0.,.0);
+			    // }
+			    // if(noiseValue > 0.05 && noiseValue<.1){
+			    // 	output_Color = vec4(vUv.x,vUv.y,1.,.0);
+			    // }
+			    // if(noiseValue > 0.1 && noiseValue<.15){
+			    // 	output_Color = vec4(vUv.y,vUv.x,1.,.0);
+			    // }
+			    // if(noiseValue > 0.15 && noiseValue<.2){
+			    // 	output_Color = vec4(vUv.y,vUv.x,vUv.x*vUv.y,.0);
+			    // }
+			    // if(noiseValue>.2){
+			    // 	output_Color = vec4(camColor,1.);
+			    // }
+			    float gradColor = (noiseValue1+noiseValue2+noiseValue3)/3.;
+			    if(gradColor<.05){
+			   		gradColor = 0.;
+			   	}
+			    else if(gradColor<.1){
+			    	gradColor = 1.;
 			    }
-			    if(noiseValue > 0.05 && noiseValue<.1){
-			    	output_Color = vec4(vUv.x,vUv.y,1.,.0);
+			    else if(gradColor<.15){
+			    	gradColor = 0.;
 			    }
-			    if(noiseValue > 0.1 && noiseValue<.15){
-			    	output_Color = vec4(vUv.y,vUv.x,1.,.0);
-			    }
-			    if(noiseValue > 0.15 && noiseValue<.2){
-			    	output_Color = vec4(vUv.y,vUv.x,vUv.x*vUv.y,.0);
-			    }
-			    if(noiseValue>.2){
-			    	output_Color = vec4(camColor,1.);
-			    }
-			    
-
+			   	else if(gradColor<.2){
+			   		gradColor = 1.;
+			   	}
+			   	else if(gradColor<.25){
+			   		gradColor = 0.;
+			   	}
+			   	else if(gradColor<.3){
+			   		gradColor = 1.;
+			   	}
+			   	else if(gradColor<.35){
+			   		gradColor = 0.;
+			   	}
+			   	else if(gradColor<.4){
+			   		gradColor = 1.;
+			   	}
+			   	else if(gradColor<.45){
+			   		gradColor = 0.;
+			   	}
+			   	else if(gradColor<.5){
+			   		gradColor = 1.;
+			   	}
+			   	else if(gradColor<.55){
+			   		gradColor = 0.;
+			   	}
+			   	else if(gradColor<.6){
+			   		gradColor = 1.;
+			   	}	
+			   	else if(gradColor<.65){
+			   		gradColor = 0.;
+			   	}
+			   	else if(gradColor<.7){
+			   		gradColor = 1.;
+			   	}
+			   	else if(gradColor<.75){
+			   		gradColor = 0.;
+			   	}
+			   	else if(gradColor<.8){
+			   		gradColor = 1.;
+			   	}
+			   	else if(gradColor<.85){
+			   		gradColor = 0.;
+			   	}
+			   	else if(gradColor<.9){
+			   		gradColor = 1.;
+			   	}
+			   	else if(gradColor<.95){
+			   		gradColor = 0.;
+			   	}
+			   	else if(gradColor<1.){
+			   		gradColor = 1.;
+			   	}
+			    vec4 output_Color = vec4(gradColor);
 			    gl_FragColor = output_Color;
 	        }
 	    </script>
