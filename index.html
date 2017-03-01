@@ -96,7 +96,7 @@
 			                                dot(p2,x2), dot(p3,x3) ) );
 			}
 
-	        //uniform sampler2D webcam;
+	        uniform sampler2D webcam;
 	        uniform vec2 u_resolution;
 	        uniform float u_time;
 			//uniform vec2 c;
@@ -105,68 +105,38 @@
 			varying vec2 vUv;
 			varying vec3 vNormal;
 			varying vec3 vPosition;
+
+			vec2 rotate2D(vec2 _st, float _angle){
+				_st -=.5;
+				_st = mat2(cos(_angle),-sin(_angle),
+					sin(_angle),cos(_angle))*_st;
+					_st += .5;
+					return _st;
+			}
+
+			vec2 tile(vec2 _st, float _zoom){
+				_st *= _zoom;
+				return fract(_st);
+			}
+
 	        void main() {
-	        	vec2 c = vec2(.6,.15);
-	        	int iter = 32;
-	            vec2 z = gl_FragCoord.xy/u_resolution.xy;
-			    //vec3 camColorRegular = texture2D( webcam, vUv).rgb;
-			    int j;
-			    for(int i=0; i<64; i++) {
-			    	j=i;
-			        float x = (z.x * z.x - z.y * z.y) + c.x;
-			        float y = (z.y * z.x + z.x * z.y) + c.y;
+	        	vec2 st = gl_FragCoord.xy/u_resolution.xy;
 
-			        if((x * x + y * y) > 4.0) break;
-			        z.x = x;
-			        z.y = y;
-			    }
-
-			    
+			    //vec3 camColor = texture2D(webcam,vUv).rgb;
 			    //vec3 output_Color = mix(camColor,camColorRegular,.15);
-			    float detail1 = 4.;
-			    float detail2 = 20.;
-			    float detail3 = 4.;
+			    float scale = 5.;
+			    float noiseValue1 = snoise(vec3(st.x*scale,u_time,st.y*scale+u_time));
+			    noiseValue1 = (noiseValue1*2.)-1.;
 
-			    float noiseValue1 = snoise(vec3(vUv.x*detail1+u_time*.5,u_time,vUv.y*detail1));
-			    float noiseValue2 = snoise(vec3(vUv.x*detail2-u_time,u_time+500.,vUv.y*detail2));
-			    float noiseValue3 = snoise(vec3(vUv.x*detail3-u_time,u_time+200.,vUv.y*detail3-u_time));
+			    vec2 rotated_coords = rotate2D(st,noiseValue1*2.5);
 
-			    noiseValue1 = pow(noiseValue1,2.);
-			    noiseValue2 = pow(noiseValue2,2.);
-			    noiseValue3 = pow(noiseValue2,2.);
-			    // vec3 camColor = texture2D( webcam, vec2(vUv.x+(noiseValue*50./u_resolution.x),vUv.y+(noiseValue*50./u_resolution.y))).rgb;
-			    // float lineColor = 0.;
-			    // vec4 output_Color;// = vec3(0.);
-			    // if(noiseValue > 0.01 && noiseValue<.5){
-			    // 	output_Color = vec4(0.,0.,0.,.0);
-			    // }
-			    // if(noiseValue > 0.05 && noiseValue<.1){
-			    // 	output_Color = vec4(vUv.x,vUv.y,1.,.0);
-			    // }
-			    // if(noiseValue > 0.1 && noiseValue<.15){
-			    // 	output_Color = vec4(vUv.y,vUv.x,1.,.0);
-			    // }
-			    // if(noiseValue > 0.15 && noiseValue<.2){
-			    // 	output_Color = vec4(vUv.y,vUv.x,vUv.x*vUv.y,.0);
-			    // }
-			    // if(noiseValue>.2){
-			    // 	output_Color = vec4(camColor,1.);
-			    // }
-			    float gradColor = (noiseValue1+noiseValue2+noiseValue3)/3.;
-			    vec3 blobColor;
-			    if(gradColor<.1){
-			   		blobColor=vec3(noiseValue1,noiseValue2,noiseValue3);
-			   	}
-			   	// else if(gradColor<.25){
-			   	// 	blobColor=vec3(noiseValue1,noiseValue3,noiseValue2);
-			   	// }
-			   	// else if(gradColor<.5){
-			   	// 	blobColor=vec3(noiseValue2,noiseValue3,noiseValue1);
-			   	// }
-			   	// else if(gradColor<.6){
-			   	// 	blobColor=vec3(noiseValue2,noiseValue1,noiseValue3);
-			   	// }
-			    vec4 output_Color = vec4(blobColor,1.);
+			    float noiseValue2 = snoise(vec3(rotated_coords.x*noiseValue1*2.+u_time,u_time,rotated_coords.y*noiseValue1*2.5));
+
+			    float r_camColor = texture2D(webcam,vUv.xy+(noiseValue2*.1)).r;
+			    float g_camColor = texture2D(webcam,vUv.xy-(noiseValue2*.1)).g;
+			    float b_camColor = texture2D(webcam,vUv.xy*(noiseValue2*.1)).b;
+
+			    vec4 output_Color = vec4(r_camColor,g_camColor,b_camColor,1.);
 			    gl_FragColor = output_Color;
 	        }
 	    </script>
