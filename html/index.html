@@ -10,12 +10,12 @@
 		<div id="container"></div>
 		<script id="vertexShader" type="x-shader/x-vertex">
 			varying vec2 vUv;
-			varying vec3 vNormal;
-			varying vec3 vPosition;
+			//varying vec3 vNormal;
+			//varying vec3 vPosition;
 	        void main() {
 	        	vUv = uv;
 			    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-			    vNormal = normal;
+			    //vNormal = normal;
 
 	            gl_Position = vec4( position, 1.0 );
 	        }
@@ -124,7 +124,7 @@
 
 			    //vec3 camColor = texture2D(webcam,vUv).rgb;
 			    //vec3 output_Color = mix(camColor,camColorRegular,.15);
-			    float scale = 5.;
+			    float scale = 1.;
 			    float noiseValue1 = snoise(vec3(st.x*scale,u_time*.1,st.y*scale+u_time*.1));
 			    noiseValue1 = 3.1415*(noiseValue1*2.)-1.;
 
@@ -132,14 +132,15 @@
 
 			    float noiseValue2 = snoise(vec3(cos(st.x*8.)*rotated_coords.x*noiseValue1*2.+u_time*.1,u_time*.1,rotated_coords.y*sin(st.y*8.)*noiseValue1*2.5));
 
-			    float r_camColor = texture2D(webcam,vUv.xy+(noiseValue2*.05)).r;
-			    float g_camColor = texture2D(webcam,vUv.xy+(noiseValue2*.05)).g;
-			    float b_camColor = texture2D(webcam,vUv.xy+(noiseValue2*.05)).b;
+			    float r_camColor = texture2D(webcam,vUv.xy).r;
+			    float g_camColor = texture2D(webcam,vUv.xy).g;
+			    float b_camColor = texture2D(webcam,vUv.xy).b;
 
-			    vec4 output_Color = vec4(r_camColor,g_camColor,b_camColor,1.);
+			    vec4 output_Color = vec4(vec3(texture2D(webcam,vUv.xy+noiseValue2)).rgb,1.);
 			    gl_FragColor = output_Color;
 	        }
 	    </script>
+		<!-- <script src="js/script.js"></script> -->
 		<script src="js/bundle.js"></script>
 	</body>
 </html>
