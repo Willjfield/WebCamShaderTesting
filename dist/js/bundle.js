@@ -5,101 +5,151 @@ var glsl = require('glslify');
 var THREE = require('three');
 
 var container;
-        var camera, scene, renderer;
-        var uniforms;
-        var analyser;
-        init();
-        animate();
+var camera, scene, renderer;
+var uniforms;
+var analyser, waveform, waveLength,bandwidth;
 
-        function init() {
-            container = document.getElementById( 'container' );
+navigator.webkitGetUserMedia( {audio:true}, successCallback, errorCallback );
 
-            camera = new THREE.Camera();
-            camera.position.z = 1;
 
-            scene = new THREE.Scene();
+function init(_ac) {
+    container = document.getElementById( 'container' );
 
-            var geometry = new THREE.PlaneBufferGeometry( 2, 2 );
+    camera = new THREE.Camera();
+    camera.position.z = 1;
 
-            uniforms = {
-                u_time: { type: "f", value: 1.0 },
-                u_resolution: { type: "v2", value: new THREE.Vector2() },
-                u_mouse: { type: "v2", value: new THREE.Vector2() },
-                amp: { type: "f", value: 1.0 }
-            };
+    scene = new THREE.Scene();
 
-            var material = new THREE.ShaderMaterial( {
-                uniforms: uniforms,
-                vertexShader: document.getElementById( 'vertexShader' ).textContent,
-                fragmentShader: document.getElementById( 'fragmentShader' ).textContent
-            } );
+    var geometry = new THREE.PlaneBufferGeometry( 2, 2 );
 
-            var mesh = new THREE.Mesh( geometry, material );
-            scene.add( mesh );
+    uniforms = {
+        u_time: { type: "f", value: 1.0 },
+        u_resolution: { type: "v2", value: new THREE.Vector2() },
+        u_mouse: { type: "v2", value: new THREE.Vector2() },
+        amp0: { type: "f", value: 1.0 },
+        amp1: { type: "f", value: 2.0 },
+        amp2: { type: "f", value: 3.0 },
+        amp3: { type: "f", value: 4.0 },
+        amp4: { type: "f", value: 1.0 },
+        amp5: { type: "f", value: 2.0 },
+        amp6: { type: "f", value: 3.0 },
+        amp7: { type: "f", value: 4.0 },
 
-            renderer = new THREE.WebGLRenderer();
-            renderer.setPixelRatio( window.devicePixelRatio );
+        amp8: { type: "f", value: 1.0 },
+        amp9: { type: "f", value: 2.0 },
+        amp10: { type: "f", value: 3.0 },
+        amp11: { type: "f", value: 4.0 },
+        amp12: { type: "f", value: 1.0 },
+        amp13: { type: "f", value: 2.0 },
+        amp14: { type: "f", value: 3.0 },
+        amp15: { type: "f", value: 4.0 },
 
-            container.appendChild( renderer.domElement );
+        amp16: { type: "f", value: 1.0 },
+        amp17: { type: "f", value: 2.0 },
+        amp18: { type: "f", value: 3.0 },
+        amp19: { type: "f", value: 4.0 },
+        amp20: { type: "f", value: 1.0 },
+        amp21: { type: "f", value: 2.0 },
+        amp22: { type: "f", value: 3.0 },
+        amp23: { type: "f", value: 4.0 },
 
-            var Analyser = require('gl-audio-analyser');
-            var audio    = document.getElementById('audio-src');
-            audio.play();
-            console.log(renderer)
-            analyser = Analyser(renderer.context, audio);
+        amp24: { type: "f", value: 1.0 },
+        amp25: { type: "f", value: 2.0 },
+        amp26: { type: "f", value: 3.0 },
+        amp27: { type: "f", value: 4.0 },
+        amp28: { type: "f", value: 1.0 },
+        amp29: { type: "f", value: 2.0 },
+        amp30: { type: "f", value: 3.0 },
+        amp31: { type: "f", value: 4.0 },
 
-            onWindowResize();
-            window.addEventListener( 'resize', onWindowResize, false );
+    };
 
-            document.onmousemove = function(e){
-              uniforms.u_mouse.value.x = e.pageX
-              uniforms.u_mouse.value.y = e.pageY
-            }
-        }
+    var material = new THREE.ShaderMaterial( {
+        uniforms: uniforms,
+        vertexShader: document.getElementById( 'vertexShader' ).textContent,
+        fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+    } );
 
-        function onWindowResize( event ) {
-            renderer.setSize( window.innerWidth, window.innerHeight );
-            uniforms.u_resolution.value.x = renderer.domElement.width;
-            uniforms.u_resolution.value.y = renderer.domElement.height;
-        }
+    var mesh = new THREE.Mesh( geometry, material );
+    scene.add( mesh );
 
-        function animate() {
-            requestAnimationFrame( animate );
-            render();
-        }
+    renderer = new THREE.WebGLRenderer();
+    renderer.setPixelRatio( window.devicePixelRatio );
 
-        var waveform = analyser.waveform();
-        var freqs=[];
+    container.appendChild( renderer.domElement );
 
-        var waveLength = waveform.length;
-        var numSections = 4;
+    var Analyser = require('gl-audio-analyser');
+    var audio    = document.getElementById('audio-src');
+    var audio = _ac;
+    audio.getTracks()[0].muted = true;
+    //audio.play();
+    //console.log(renderer)
+    analyser = Analyser(renderer.context, audio);
+    waveform = analyser.waveform();
+    waveLength = waveform.length;
+    bandwidth = waveLength/numSections;
 
-        for(var f = 0;f<numSections;f++){
-          freqs.push(0)
-        }
-        console.log(freqs)
-        var bandwidth = waveLength/numSections;
-        var averageAmp = 0;
+    onWindowResize();
+    window.addEventListener( 'resize', onWindowResize, false );
 
-        function render() {
-            waveform = analyser.waveform();
-            averageAmp = 0;
-            for(var w=0;w<numSections;w++){
-              for(var b = 0;b<bandwidth;b++){
-                var band = b*(w+1);
-                freqs[w] += waveform[band];
-              }
-              freqs[w] /= bandwidth;              
-            }
-            //averageAmp/=waveLength;
-            //averageAmp -= 128;
-            var moveAmnt = (averageAmp-127)/10; 
-            //console.log(moveAmnt)
-            //console.log(freqs[0])
-            //uniforms.amp.value = freqs[0];
-            uniforms.u_time.value += 0.05;
-            renderer.render( scene, camera );
-        }
+    document.onmousemove = function(e){
+      uniforms.u_mouse.value.x = e.pageX
+      uniforms.u_mouse.value.y = e.pageY
+    }
+}
+
+function onWindowResize( event ) {
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    uniforms.u_resolution.value.x = renderer.domElement.width;
+    uniforms.u_resolution.value.y = renderer.domElement.height;
+}
+
+function animate() {
+    requestAnimationFrame( animate );
+    render();
+}
+
+var numSections = 32;
+var averageAmp = 0;
+
+function render() {
+    waveform = analyser.waveform();
+    averageAmp = 0;
+    for(var w=0;w<numSections;w++){
+      for(var b = 0;b<bandwidth;b++){
+        var band = b*(w+1);
+        uniforms['amp'+w].value += waveform[band]-128;
+      }
+      uniforms['amp'+w].value /= bandwidth;
+      //uniforms['amp'+w].value = Math.pow(uniforms['amp'+w].value,2)           
+    }
+    //console.log(uniforms['amp1'].value)
+    //var moveAmnt = (averageAmp-127)/10; 
+
+    uniforms.u_time.value += 0.05;
+    renderer.render( scene, camera );
+}
+
+function successCallback(stream) {
+    //var audioContext = new (window.AudioContext)();
+
+    // Create an AudioNode from the stream.
+    //var mediaStreamSource = audioContext.createMediaStreamSource( stream );
+
+    // Connect it to the destination to hear yourself (or any other node for processing!)
+    //mediaStreamSource.connect( audioContext.destination );
+
+    init(stream);
+    animate();
+
+}
+
+function errorCallback() {
+    console.log("The following error occurred: " + err);
+}
+
+
+
 // fork getUserMedia for multiple browser versions, for the future
 // when more browsers support MediaRecorder
 /*

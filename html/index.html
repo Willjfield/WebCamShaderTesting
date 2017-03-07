@@ -6,7 +6,7 @@
 		<script src="js/lib/OrbitControls.js"></script>
 		<script src="js/lib/jquery-3.1.1.min.js"></script> -->
 	</head>
-	<body>
+	<body style="margin: 0px">
 		<div id="container"></div>
 		<audio id='audio-src' src='Prince.wav'></audio>
 <script id="vertexShader" type="x-shader/x-vertex">
@@ -75,16 +75,108 @@
 		                                dot(p2,x2), dot(p3,x3) ) );
 		}
 
-
         uniform vec2 u_resolution;
         uniform float u_time;
-        uniform float amp;
+        uniform float amp0;
+        uniform float amp1;
+        uniform float amp2;
+        uniform float amp3;
+        uniform float amp4;
+        uniform float amp5;
+        uniform float amp6;
+        uniform float amp7;
+
+        uniform float amp8;
+        uniform float amp9;
+        uniform float amp10;
+        uniform float amp11;
+        uniform float amp12;
+        uniform float amp13;
+        uniform float amp14;
+        uniform float amp15;
+
+        uniform float amp16;
+        uniform float amp17;
+        uniform float amp18;
+        uniform float amp19;
+        uniform float amp20;
+        uniform float amp21;
+        uniform float amp22;
+        uniform float amp23;
+
+        uniform float amp24;
+        uniform float amp25;
+        uniform float amp26;
+        uniform float amp27;
+        uniform float amp28;
+        uniform float amp29;
+        uniform float amp30;
+        uniform float amp31;
+
+        float amps[32];
+        
+
+        float getData(int id) {
+		    for (int i=0; i<32; i++) {
+		        if (i == id) return amps[i];
+		    }
+		}
+
         void main() {
             vec2 st = gl_FragCoord.xy/u_resolution.xy;
-            float noise = snoise(vec3(st.x*10.,amp*.1,st.y*10.))*amp;
-            float line = step(fract(st.y*10.+noise),.5);
+            //
+            //float numberSections = 8.;
+            float numberSections = 32.;
+            
+            amps[0] = amp0;
+	        amps[1] = amp1;
+	        amps[2] = amp2;
+	        amps[3] = amp3;
+	        amps[4] = amp4;
+	        amps[5] = amp5;
+	        amps[6] = amp6;
+	        amps[7] = amp7;
+
+	        amps[8] = amp8;
+	        amps[9] = amp9;
+	        amps[10] = amp10;
+	        amps[11] = amp11;
+	        amps[12] = amp12;
+	        amps[13] = amp13;
+	        amps[14] = amp14;
+	        amps[15] = amp15;
+
+	        amps[16] = amp16;
+	        amps[17] = amp17;
+	        amps[18] = amp18;
+	        amps[19] = amp19;
+	        amps[20] = amp20;
+	        amps[21] = amp21;
+	        amps[22] = amp22;
+	        amps[23] = amp23;
+
+	        amps[24] = amp24;
+	        amps[25] = amp25;
+	        amps[26] = amp26;
+	        amps[27] = amp27;
+	        amps[28] = amp28;
+	        amps[29] = amp29;
+	        amps[30] = amp30;
+	        amps[31] = amp31;
+
+            int section = int(floor(st.y*numberSections));
+
+            float appliedAmp = 1.+log(getData(section));
+
+            float noise = snoise(vec3(st.x*10.+u_time,u_time*.01+appliedAmp,st.y*10.))*appliedAmp*.1;
+            float noise1 = snoise(vec3(st.x*10.+u_time+10.,u_time*.01+appliedAmp,st.y*10.))*appliedAmp*.1;
+            float noise2 = snoise(vec3(st.x*10.+u_time+100.,u_time*.01+appliedAmp,st.y*10.))*appliedAmp*.1;
+
+            float lineR = step(fract(st.y*8.+noise),appliedAmp*.1);
+            float lineG = step(fract(st.y*8.-noise1),appliedAmp*.1);
+            float lineB = step(fract(st.y*8.+noise2),appliedAmp*.1);
             //line*=
-            gl_FragColor=vec4(line,line,line,1.0);
+            gl_FragColor=vec4(lineR,lineG,lineB,1.0);
         }
     </script>
 		<!-- <script src="js/script.js"></script> -->
