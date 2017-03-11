@@ -3,7 +3,7 @@ var glsl = require('glslify');
 var THREE = require('three');
 
 var container;
-var camera, scene, renderer;
+var camera, scene, renderer, parentOBJ, sphereparentOBJ;
 var uniforms;
 var analyser, waveform, waveLength,bandwidth;
 
@@ -13,7 +13,8 @@ navigator.webkitGetUserMedia( {audio:true}, successCallback, errorCallback );
 function init(_ac) {
     container = document.getElementById( 'container' );
 
-    camera = new THREE.Camera();
+    //camera = new THREE.Camera();
+    camera = new THREE.PerspectiveCamera( 75,  window.innerWidth / window.innerHeight, .1, 1000 );
     camera.position.z = 1;
 
     scene = new THREE.Scene();
@@ -69,7 +70,7 @@ function init(_ac) {
     } );
 
     var mesh = new THREE.Mesh( geometry, material );
-    scene.add( mesh );
+    //scene.add( mesh );
 
     renderer = new THREE.WebGLRenderer();
     renderer.setPixelRatio( window.devicePixelRatio );
@@ -83,10 +84,36 @@ function init(_ac) {
     //audio.play();
     //console.log(renderer)
     analyser = Analyser(renderer.context, audio);
-    waveform = analyser.waveform();
+    //console.log(analyser)
+    waveform = analyser.frequencies();
     waveLength = waveform.length;
     bandwidth = waveLength/numSections;
 
+    //console.log(analyser.frequencies().length)
+    //console.log(analyser.waveform().length)
+    var boxgeometry = new THREE.BoxBufferGeometry( 1, 1, 1 );
+    var boxmaterial = new THREE.MeshBasicMaterial( {color:0x00ff00,wireframe:true});
+    parentOBJ = new THREE.Object3D();
+    for(var i=0;i<1024;i+=16){
+     var boxmesh = new THREE.Mesh( boxgeometry, boxmaterial );
+     boxmesh.position.x = (i*.05)-25;
+     boxmesh.position.z = -30;
+     parentOBJ.add(boxmesh);
+    }
+    scene.add(parentOBJ)
+    
+
+    var spheregeometry = new THREE.SphereBufferGeometry( .25, 4, 8 );
+    var spherematerial = new THREE.MeshBasicMaterial( {color:0xff0000,wireframe:true});
+    sphereparentOBJ = new THREE.Object3D();
+    for(var i=0;i<1024;i+=16){
+     var spheremesh = new THREE.Mesh( spheregeometry, spherematerial );
+     spheremesh.position.x = (i*.05)-25;
+     spheremesh.position.z = -30;
+     sphereparentOBJ.add(spheremesh);
+    }
+    scene.add(sphereparentOBJ);
+    console.log(sphereparentOBJ)
     onWindowResize();
     window.addEventListener( 'resize', onWindowResize, false );
 
@@ -110,18 +137,44 @@ function animate() {
 var numSections = 32;
 var averageAmp = 0;
 
+var counter = 0;
 function render() {
+    //counter++;
     waveform = analyser.waveform();
-    averageAmp = 0;
-    for(var w=0;w<numSections;w++){
-      for(var b = 0;b<bandwidth;b++){
-        var band = b*(w+1);
-        uniforms['amp'+w].value += waveform[band]-128;
-      }
-      uniforms['amp'+w].value /= bandwidth;
-      //uniforms['amp'+w].value = Math.pow(uniforms['amp'+w].value,2)           
+    freq = analyser.frequencies();
+    for(var obj in parentOBJ.children){
+      parentOBJ.children[obj].rotation.x+=.08*Math.random(obj);
+      parentOBJ.children[obj].rotation.y+=.04*Math.random(obj);
+      parentOBJ.children[obj].position.y=(freq[obj]*.1)-10;
     }
-    //console.log(uniforms['amp1'].value)
+
+    for(var obj in sphereparentOBJ.children){
+      //sphereparentOBJ.children[obj].rotation.x+=.02*Math.random(obj);
+      //sphereparentOBJ.children[obj].rotation.y+=.01*Math.random(obj);
+      sphereparentOBJ.children[obj].position.y=waveform[obj*8]*.1;
+    }
+    //averageAmp = 0;
+    // for(var w=0;w<numSections;w++){
+    //   for(var b = 0;b<bandwidth;b++){
+    //     var band = b*(w+1);
+    //     uniforms['amp'+w].value += waveform[band];
+    //   }
+    //   uniforms['amp'+w].value /= bandwidth;
+    // }
+
+    // var loudest = 0;
+    // for(var i=0;i<waveform.length;i++){
+    //   if(waveform[i]>loudest){
+    //     loudest = i;
+    //   }
+    // }
+    // if(counter%3==0){
+    //   console.log(loudest)
+    // }
+     
+     // console.log('255: '+waveform[255])
+     // console.log('511: '+waveform[511])
+     //console.log('1024: '+analyser.freqFlt[1023])
     //var moveAmnt = (averageAmp-127)/10; 
 
     uniforms.u_time.value += 0.05;
@@ -138,6 +191,7 @@ function successCallback(stream) {
     //mediaStreamSource.connect( audioContext.destination );
 
     init(stream);
+    //stream.getAudioTracks()[0].stop();
     animate();
 
 }
