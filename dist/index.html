@@ -9,7 +9,7 @@
 	<body style="margin: 0px">
 		<div id="container"></div>
 		<audio id='audio-src' src='Prince.wav'></audio>
-<script id="vertexShader" type="x-shader/x-vertex">
+	<script id="vertexShader" type="x-shader/x-vertex">
         void main() {
             gl_Position = vec4( position, 1.0 );
         }
@@ -113,6 +113,8 @@
         uniform float amp30;
         uniform float amp31;
 
+        uniform float amplitude;
+
         float amps[32];
         
 
@@ -166,7 +168,7 @@
 
             int section = int(floor(st.y*numberSections));
 
-            float appliedAmp = 1.+log(getData(section));
+            float appliedAmp = log(getData(section)/128.)*pow(amplitude,4.);
 
             float noise = snoise(vec3(st.x*10.+u_time,u_time*.01+appliedAmp,st.y*10.))*appliedAmp*.1;
             float noise1 = snoise(vec3(st.x*10.+u_time+10.,u_time*.01+appliedAmp,st.y*10.))*appliedAmp*.1;

@@ -9,7 +9,12 @@ var camera, scene, renderer, parentOBJ, sphereparentOBJ;
 var uniforms;
 var analyser, waveform, waveLength,bandwidth;
 
-navigator.webkitGetUserMedia( {audio:true}, successCallback, errorCallback );
+//navigator.webkitGetUserMedia( {audio:true}, successCallback, errorCallback );
+var audio    = document.getElementById('audio-src');
+audio.play();
+//audio.mute();
+init(audio);
+animate();
 
 
 function init(_ac) {
@@ -27,6 +32,7 @@ function init(_ac) {
         u_time: { type: "f", value: 1.0 },
         u_resolution: { type: "v2", value: new THREE.Vector2() },
         u_mouse: { type: "v2", value: new THREE.Vector2() },
+        amplitude:{type: "f", value: 1.0},
         amp0: { type: "f", value: 1.0 },
         amp1: { type: "f", value: 2.0 },
         amp2: { type: "f", value: 3.0 },
@@ -68,11 +74,12 @@ function init(_ac) {
     var material = new THREE.ShaderMaterial( {
         uniforms: uniforms,
         vertexShader: document.getElementById( 'vertexShader' ).textContent,
-        fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+        fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+        side: THREE.DoubleSide  
     } );
 
     var mesh = new THREE.Mesh( geometry, material );
-    //scene.add( mesh );
+    scene.add( mesh );
 
     renderer = new THREE.WebGLRenderer();
     renderer.setPixelRatio( window.devicePixelRatio );
@@ -80,19 +87,13 @@ function init(_ac) {
     container.appendChild( renderer.domElement );
 
     var Analyser = require('gl-audio-analyser');
-    var audio    = document.getElementById('audio-src');
-    var audio = _ac;
-    audio.getTracks()[0].muted = true;
-    //audio.play();
-    //console.log(renderer)
+    audio = _ac;
     analyser = Analyser(renderer.context, audio);
-    //console.log(analyser)
+
     waveform = analyser.frequencies();
     waveLength = waveform.length;
     bandwidth = waveLength/numSections;
 
-    //console.log(analyser.frequencies().length)
-    //console.log(analyser.waveform().length)
     var boxgeometry = new THREE.BoxBufferGeometry( 1, 1, 1 );
     var boxmaterial = new THREE.MeshBasicMaterial( {color:0x00ff00,wireframe:true});
     parentOBJ = new THREE.Object3D();
@@ -115,7 +116,7 @@ function init(_ac) {
      sphereparentOBJ.add(spheremesh);
     }
     scene.add(sphereparentOBJ);
-    console.log(sphereparentOBJ)
+    console.log(sphereparentOBJ.children.length)
     onWindowResize();
     window.addEventListener( 'resize', onWindowResize, false );
 
@@ -140,44 +141,43 @@ var numSections = 32;
 var averageAmp = 0;
 
 var counter = 0;
+
+function avg(_array){
+  var total = 0;
+  for(var i = 0;i<_array.length;i++){
+    total += _array[i]
+  }
+  total/=_array.length;
+  return total
+}
+
+function largest(_array){
+  var largest = 0;
+  for(var i = 0;i<_array.length;i++){
+    if(largest<_array[i]){
+      largest = _array[i]
+    } 
+  }
+  return largest
+}
+
 function render() {
     //counter++;
     waveform = analyser.waveform();
     freq = analyser.frequencies();
-    for(var obj in parentOBJ.children){
-      parentOBJ.children[obj].rotation.x+=.08*Math.random(obj);
-      parentOBJ.children[obj].rotation.y+=.04*Math.random(obj);
-      parentOBJ.children[obj].position.y=(freq[obj]*.1)-10;
-    }
 
-    for(var obj in sphereparentOBJ.children){
-      //sphereparentOBJ.children[obj].rotation.x+=.02*Math.random(obj);
-      //sphereparentOBJ.children[obj].rotation.y+=.01*Math.random(obj);
-      sphereparentOBJ.children[obj].position.y=waveform[obj*8]*.1;
-    }
-    //averageAmp = 0;
-    // for(var w=0;w<numSections;w++){
-    //   for(var b = 0;b<bandwidth;b++){
-    //     var band = b*(w+1);
-    //     uniforms['amp'+w].value += waveform[band];
-    //   }
-    //   uniforms['amp'+w].value /= bandwidth;
+    var amplitude = largest(waveform)/128;
+    uniforms.amplitude.value = amplitude;
+    console.log(amplitude)
+    // for(var obj in sphereparentOBJ.children){
+    //   sphereparentOBJ.children[obj].position.y=waveform[obj*8]*.1;
     // }
 
-    // var loudest = 0;
-    // for(var i=0;i<waveform.length;i++){
-    //   if(waveform[i]>loudest){
-    //     loudest = i;
-    //   }
-    // }
-    // if(counter%3==0){
-    //   console.log(loudest)
-    // }
-     
-     // console.log('255: '+waveform[255])
-     // console.log('511: '+waveform[511])
-     //console.log('1024: '+analyser.freqFlt[1023])
-    //var moveAmnt = (averageAmp-127)/10; 
+    for(var i=0;i<32;i++){
+      uniforms['amp'+i].value = (freq[i*2]+freq[(i*2)+1])/2;
+      //amp0: { type: "f", value: 1.0 },
+    }
+    
 
     uniforms.u_time.value += 0.05;
     renderer.render( scene, camera );
