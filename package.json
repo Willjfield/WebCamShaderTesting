@@ -48,6 +48,7 @@
     "soundcloud-badge": "^1.1.0",
     "stylelint": "^2.3.1",
     "three": "^0.84.0",
+    "three-orbit-controls": "^82.1.0",
     "vinyl-buffer": "^1.0.0",
     "vinyl-ftp": "^0.4.5",
     "vinyl-source-stream": "^1.1.0"

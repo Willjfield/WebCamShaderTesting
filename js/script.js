@@ -1,7 +1,163 @@
 var $ = require('jquery');
 var glsl = require('glslify');
 var THREE = require('three');
+var OrbitControls = require('three-orbit-controls')(THREE);
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+var controls, renderer;
 
+var geometry,material,cube, light, uniforms;
+var audio, analyser;
+
+function init(){
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize( window.innerWidth, window.innerHeight );
+  document.body.appendChild( renderer.domElement );
+
+  controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.25;
+            controls.minDistance = 0;
+            controls.minPolarAngle = 0; // radians
+            controls.maxPolarAngle = Math.PI*2
+
+  camera.position.z = -25;
+
+  uniforms = {
+        u_time: { type: "f", value: 1.0 },
+        u_resolution: { type: "v2", value: new THREE.Vector2() },
+        u_mouse: { type: "v2", value: new THREE.Vector2() },
+        amplitude:{type: "f", value: 1.0},
+        amp0: { type: "f", value: 1.0 },
+        amp1: { type: "f", value: 2.0 },
+        amp2: { type: "f", value: 3.0 },
+        amp3: { type: "f", value: 4.0 },
+        amp4: { type: "f", value: 1.0 },
+        amp5: { type: "f", value: 2.0 },
+        amp6: { type: "f", value: 3.0 },
+        amp7: { type: "f", value: 4.0 },
+
+        amp8: { type: "f", value: 1.0 },
+        amp9: { type: "f", value: 2.0 },
+        amp10: { type: "f", value: 3.0 },
+        amp11: { type: "f", value: 4.0 },
+        amp12: { type: "f", value: 1.0 },
+        amp13: { type: "f", value: 2.0 },
+        amp14: { type: "f", value: 3.0 },
+        amp15: { type: "f", value: 4.0 },
+
+        amp16: { type: "f", value: 1.0 },
+        amp17: { type: "f", value: 2.0 },
+        amp18: { type: "f", value: 3.0 },
+        amp19: { type: "f", value: 4.0 },
+        amp20: { type: "f", value: 1.0 },
+        amp21: { type: "f", value: 2.0 },
+        amp22: { type: "f", value: 3.0 },
+        amp23: { type: "f", value: 4.0 },
+
+        amp24: { type: "f", value: 1.0 },
+        amp25: { type: "f", value: 2.0 },
+        amp26: { type: "f", value: 3.0 },
+        amp27: { type: "f", value: 4.0 },
+        amp28: { type: "f", value: 1.0 },
+        amp29: { type: "f", value: 2.0 },
+        amp30: { type: "f", value: 3.0 },
+        amp31: { type: "f", value: 4.0 },
+        noise_stage: { type: "f", value: 1.0 },
+
+    };
+
+
+  geometry = new THREE.SphereGeometry( 1, 16, 16 );
+  //material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
+  material = new THREE.ShaderMaterial( {
+      uniforms: uniforms,
+      vertexShader: document.getElementById( 'vertexShader' ).textContent,
+      fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+      side: THREE.DoubleSide  
+  } );
+
+  cube = new THREE.Mesh( geometry, material );
+  scene.add( cube );
+
+    var Analyser = require('gl-audio-analyser');
+    var audio    = document.getElementById('audio-src');
+    audio.play();
+    analyser = Analyser(renderer.context, audio);
+
+  // light = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
+  // scene.add( light );
+}
+
+function update(){
+  cube.rotation.x += 0.01;
+  cube.rotation.y += 0.01;
+  controls.update();
+  //renderer.render(scene, camera);
+}
+
+var numSections = 32;
+var averageAmp = 0;
+
+var counter = 0;
+
+function avg(_array){
+  var total = 0;
+  for(var i = 0;i<_array.length;i++){
+    total += _array[i]
+  }
+  total/=_array.length;
+  return total
+}
+
+function largest(_array){
+  var largest = 0;
+  for(var i = 0;i<_array.length;i++){
+    if(largest<_array[i]){
+      largest = _array[i]
+    } 
+  }
+  return largest
+}
+var noise_stage = 0;
+
+function render() {
+    update();
+    waveform = analyser.waveform();
+    freq = analyser.frequencies();
+
+    var amplitude = largest(waveform)/128;
+    uniforms.amplitude.value = amplitude;
+    console.log(amplitude)
+    noise_stage += amplitude-1;
+    uniforms.noise_stage.value = noise_stage;
+
+    for(var i=0;i<32;i++){
+      uniforms['amp'+i].value = (freq[i*2]+freq[(i*2)+1])/2;
+    }
+    
+
+    uniforms.u_time.value += 0.05;
+    renderer.render( scene, camera );
+    requestAnimationFrame( render );
+}
+
+// function render(){
+  
+//   requestAnimationFrame( render );
+// }
+
+init();
+render();
+
+window.addEventListener('resize', function(){
+
+    renderer.setSize( window.innerWidth, window.innerHeight );
+
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+  }, false);
+/*
 var container;
 var camera, scene, renderer, parentOBJ, sphereparentOBJ;
 var uniforms;
@@ -14,15 +170,18 @@ audio.play();
 init(audio);
 animate();
 
-
+var mesh;
 function init(_ac) {
     container = document.getElementById( 'container' );
 
-    //camera = new THREE.Camera();
-    camera = new THREE.PerspectiveCamera( 75,  window.innerWidth / window.innerHeight, .1, 1000 );
-    camera.position.z = 1;
-
     scene = new THREE.Scene();
+    
+    console.log(scene)
+    camera = new THREE.PerspectiveCamera( 45,  window.innerWidth / window.innerHeight, .1, 1000 );
+    scene.add(camera)
+    //camera.updateProjectionMatrix ()
+    camera.position.z = 20;
+    console.log(camera.isPerspectiveCamera)
 
     var geometry = new THREE.PlaneBufferGeometry( 2, 2 );
 
@@ -66,6 +225,7 @@ function init(_ac) {
         amp29: { type: "f", value: 2.0 },
         amp30: { type: "f", value: 3.0 },
         amp31: { type: "f", value: 4.0 },
+        noise_stage: { type: "f", value: 1.0 },
 
     };
 
@@ -76,13 +236,15 @@ function init(_ac) {
         side: THREE.DoubleSide  
     } );
 
-    var mesh = new THREE.Mesh( geometry, material );
+    var sphere = new THREE.SphereGeometry( 1, 16, 16 );
+    mesh = new THREE.Mesh( sphere, material );
+    //mesh.position.z = -100;
     scene.add( mesh );
 
     renderer = new THREE.WebGLRenderer();
-    renderer.setPixelRatio( window.devicePixelRatio );
-
-    container.appendChild( renderer.domElement );
+    //renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    document.body.appendChild( renderer.domElement );
 
     var Analyser = require('gl-audio-analyser');
     audio = _ac;
@@ -101,10 +263,8 @@ function init(_ac) {
      boxmesh.position.z = -30;
      parentOBJ.add(boxmesh);
     }
-    scene.add(parentOBJ)
-    
 
-    var spheregeometry = new THREE.SphereBufferGeometry( .25, 4, 8 );
+    var spheregeometry = new THREE.SphereBufferGeometry( .15, 4, 8 );
     var spherematerial = new THREE.MeshBasicMaterial( {color:0xff0000,wireframe:true});
     sphereparentOBJ = new THREE.Object3D();
     for(var i=0;i<1024;i+=16){
@@ -113,10 +273,8 @@ function init(_ac) {
      spheremesh.position.z = -30;
      sphereparentOBJ.add(spheremesh);
     }
-    scene.add(sphereparentOBJ);
-    console.log(sphereparentOBJ.children.length)
+
     onWindowResize();
-    window.addEventListener( 'resize', onWindowResize, false );
 
     document.onmousemove = function(e){
       uniforms.u_mouse.value.x = e.pageX
@@ -126,9 +284,16 @@ function init(_ac) {
 
 function onWindowResize( event ) {
     renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.setSize( window.innerWidth, window.innerHeight );
     uniforms.u_resolution.value.x = renderer.domElement.width;
     uniforms.u_resolution.value.y = renderer.domElement.height;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    console.log(camera)
+    camera.updateProjectionMatrix();
 }
+
+
+window.addEventListener('resize', onWindowResize, false);
 
 function animate() {
     requestAnimationFrame( animate );
@@ -158,22 +323,20 @@ function largest(_array){
   }
   return largest
 }
+var noise_stage = 0;
 
 function render() {
-    //counter++;
     waveform = analyser.waveform();
     freq = analyser.frequencies();
 
     var amplitude = largest(waveform)/128;
     uniforms.amplitude.value = amplitude;
-    console.log(amplitude)
-    // for(var obj in sphereparentOBJ.children){
-    //   sphereparentOBJ.children[obj].position.y=waveform[obj*8]*.1;
-    // }
+    //console.log(amplitude)
+    noise_stage += amplitude-1;
+    uniforms.noise_stage.value = noise_stage;
 
     for(var i=0;i<32;i++){
       uniforms['amp'+i].value = (freq[i*2]+freq[(i*2)+1])/2;
-      //amp0: { type: "f", value: 1.0 },
     }
     
 
