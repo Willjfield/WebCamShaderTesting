@@ -1,5 +1,6 @@
 var $ = require('jquery');
-var glsl = require('glslify');
+var glslify = require('glslify');
+var glShader = require('gl-shader');
 var THREE = require('three');
 var OrbitControls = require('three-orbit-controls')(THREE);
 var scene = new THREE.Scene();
@@ -12,6 +13,7 @@ var audio, analyser;
 function init(){
   renderer = new THREE.WebGLRenderer();
   renderer.setSize( window.innerWidth, window.innerHeight );
+  renderer.setClearColor (0xffffff, 1);
   document.body.appendChild( renderer.domElement );
 
   controls = new OrbitControls(camera, renderer.domElement);
@@ -21,7 +23,7 @@ function init(){
             controls.minPolarAngle = 0; // radians
             controls.maxPolarAngle = Math.PI*2
 
-  camera.position.z = -25;
+  camera.position.z = -2;
 
   uniforms = {
         u_time: { type: "f", value: 1.0 },
@@ -68,12 +70,12 @@ function init(){
     };
 
 
-  geometry = new THREE.SphereGeometry( 1, 16, 16 );
-  //material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
+  geometry = new THREE.IcosahedronBufferGeometry(1, 3);
+
   material = new THREE.ShaderMaterial( {
       uniforms: uniforms,
-      vertexShader: document.getElementById( 'vertexShader' ).textContent,
-      fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+      vertexShader: glslify("./vert.glsl"),
+      fragmentShader: glslify("./frag.glsl"),
       side: THREE.DoubleSide  
   } );
 
@@ -90,7 +92,7 @@ function init(){
 }
 
 function update(){
-  cube.rotation.x += 0.01;
+  //cube.rotation.x += 0.01;
   cube.rotation.y += 0.01;
   controls.update();
   //renderer.render(scene, camera);
@@ -128,7 +130,7 @@ function render() {
 
     var amplitude = largest(waveform)/128;
     uniforms.amplitude.value = amplitude;
-    console.log(amplitude)
+    //console.log(amplitude)
     noise_stage += amplitude-1;
     uniforms.noise_stage.value = noise_stage;
 

@@ -31,6 +31,8 @@
     "del": "^2.1.0",
     "eslint": "^1.10.1",
     "gl-audio-analyser": "^1.0.3",
+    "gl-shader": "^4.2.1",
+    "glsl-noise": "0.0.0",
     "glslify": "^6.0.1",
     "gulp": "^3.9.0",
     "gulp-autoprefixer": "^3.1.0",
@@ -55,7 +57,8 @@
   },
   "browserify": {
     "transform": [
-      "browserify-shim"
+      "browserify-shim",
+      "glslify"
     ]
   },
   "browser": {},
