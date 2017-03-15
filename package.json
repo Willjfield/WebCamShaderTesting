@@ -30,6 +30,8 @@
     "browserify-shim": "^3.8.12",
     "del": "^2.1.0",
     "eslint": "^1.10.1",
+    "fantasy-map-noise": "0.0.2",
+    "fast-simplex-noise": "^3.2.0",
     "gl-audio-analyser": "^1.0.3",
     "gl-shader": "^4.2.1",
     "glsl-noise": "0.0.0",

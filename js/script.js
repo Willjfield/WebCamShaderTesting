@@ -3,15 +3,52 @@ var glslify = require('glslify');
 var glShader = require('gl-shader');
 var THREE = require('three');
 var OrbitControls = require('three-orbit-controls')(THREE);
+var noise = require('fantasy-map-noise');
+
+
+
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 var controls, renderer;
 
-var geometry,material,cube, light, uniforms;
+var geometry,material,cube, light, uniforms, texture, parent;
 var audio, analyser;
 
-function init(){
-  renderer = new THREE.WebGLRenderer();
+navigator.getUserMedia = ( navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
+
+if (navigator.getUserMedia) {
+   console.log('getUserMedia supported.');
+   navigator.getUserMedia (
+      // constraints - only audio needed for this app
+      {
+         audio: false,
+         video: true
+      },
+
+      // Success callback
+      function(stream) {
+      
+        var videoURL = window.URL.createObjectURL(stream);
+        var video = document.createElement('video');
+        video.src = videoURL;
+        video.onloadedmetadata = function() {
+        video.play(); 
+        init(video);
+        render();
+        };
+      },
+
+      // Error callback
+      function(err) {
+         console.log('The following gUM error occured: ' + err);
+      }
+   );
+} else {
+   console.log('getUserMedia not supported on your browser!');
+}
+
+function init(_video){
+  renderer = new THREE.WebGLRenderer({antialias:true});
   renderer.setSize( window.innerWidth, window.innerHeight );
   renderer.setClearColor (0xffffff, 1);
   document.body.appendChild( renderer.domElement );
@@ -23,9 +60,15 @@ function init(){
             controls.minPolarAngle = 0; // radians
             controls.maxPolarAngle = Math.PI*2
 
-  camera.position.z = -2;
+  camera.position.z = -20;
+  camera.position.y = 10;
+  texture = new THREE.VideoTexture( _video );
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.format = THREE.RGBFormat;
 
   uniforms = {
+        webcam: { type: "t", value: texture},
         u_time: { type: "f", value: 1.0 },
         u_resolution: { type: "v2", value: new THREE.Vector2() },
         u_mouse: { type: "v2", value: new THREE.Vector2() },
@@ -78,9 +121,24 @@ function init(){
       fragmentShader: glslify("./frag.glsl"),
       side: THREE.DoubleSide  
   } );
+  geometry.computeFaceNormals();
+  geometry.computeVertexNormals();
+  //material = new THREE.MeshBasicMaterial( {color:0xff0000} );
+  var spread = 5;
+  var scaleMax = 5;
+  var number = 50;
+  parent = new THREE.Object3D();
+  for(var m=0;m<number;m++){
+    var posx=(Math.random()*2-1)*spread;
+    var posy=(Math.random()*2-1)*spread;
+    var posz=(Math.random()*2-1)*spread;
+    var _scale = (Math.random()*2-1)*scaleMax;
+    createMesh(geometry, material, new THREE.Vector3( posx,posy, posz ),new THREE.Vector3( posx,posy, posz ),_scale,parent);
+  }
+  
+  scene.add(parent);
 
-  cube = new THREE.Mesh( geometry, material );
-  scene.add( cube );
+  //console.log(parent.children)
 
     var Analyser = require('gl-audio-analyser');
     var audio    = document.getElementById('audio-src');
@@ -91,12 +149,16 @@ function init(){
   // scene.add( light );
 }
 
-function update(){
-  //cube.rotation.x += 0.01;
-  cube.rotation.y += 0.01;
-  controls.update();
-  //renderer.render(scene, camera);
+function createMesh(_geometry, _material, _position, _rotation, _scale, _parent){
+  var _mesh = new THREE.Mesh( _geometry, _material );
+  _mesh.position.set(_position.x,_position.y,_position.z);
+  _mesh.rotation.set(_rotation.x,_rotation.y,_rotation.z);
+  _mesh.scale.set(_scale,_scale,_scale);
+  _parent.add( _mesh );
+ 
+  //console.log(_mesh)
 }
+
 
 var numSections = 32;
 var averageAmp = 0;
@@ -122,9 +184,17 @@ function largest(_array){
   return largest
 }
 var noise_stage = 0;
-
+var js_noise_stage = 0;
+var noise_value;
 function render() {
-    update();
+  js_noise_stage+=.01;
+  
+  //console.log(noise_value)
+  requestAnimationFrame( render );
+    texture.needsUpdate = true;
+     //controls.rotateUp(noise.perlin2(.1, js_noise_stage));
+    controls.update();
+
     waveform = analyser.waveform();
     freq = analyser.frequencies();
 
@@ -138,10 +208,20 @@ function render() {
       uniforms['amp'+i].value = (freq[i*2]+freq[(i*2)+1])/2;
     }
     
+    for(var s = 0; s<parent.children.length;s++){
+      noise_value = noise.perlin2(s*.1, js_noise_stage);
+      parent.children[s].position.x = noise_value*10;
+      noise_value = noise.perlin2(s*.34, js_noise_stage);
+      parent.children[s].position.y = noise_value*10;
+      noise_value = noise.perlin2(s*.77, js_noise_stage);
+      parent.children[s].position.z = noise_value*10;
+    }
 
+    parent.rotateX(noise.perlin2(.31, js_noise_stage)*.1)
+    parent.rotateY(noise.perlin2(.52, js_noise_stage)*.1)
     uniforms.u_time.value += 0.05;
     renderer.render( scene, camera );
-    requestAnimationFrame( render );
+    
 }
 
 // function render(){
@@ -149,8 +229,7 @@ function render() {
 //   requestAnimationFrame( render );
 // }
 
-init();
-render();
+
 
 window.addEventListener('resize', function(){
 

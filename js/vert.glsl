@@ -38,7 +38,6 @@ uniform float amp31;
 
 float amps[32];
 
-
 float getData(int id) {
     for (int i=0; i<32; i++) {
         if (i == id) return amps[i];
@@ -93,11 +92,11 @@ void main()
 	
 	
 	vec4 originalPosition = projectionMatrix * mvPosition;
-	int section = int(floor(vNormal.y*numberSections));
+	int section = int(floor(((vNormal.y+1.)*.5)*numberSections));
 
 	float multiplier = getData(section);
 	vec4 newPosition = projectionMatrix * mvPosition;
-	newPosition.y += multiplier*.0025;
+	newPosition.y += multiplier*.02;
 	gl_Position = newPosition;
 	//gl_Position = mvPosition;
 }

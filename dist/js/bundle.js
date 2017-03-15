@@ -5,15 +5,52 @@ var glslify = require('glslify');
 var glShader = require('gl-shader');
 var THREE = require('three');
 var OrbitControls = require('three-orbit-controls')(THREE);
+var noise = require('fantasy-map-noise');
+
+
+
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 var controls, renderer;
 
-var geometry,material,cube, light, uniforms;
+var geometry,material,cube, light, uniforms, texture, parent;
 var audio, analyser;
 
-function init(){
-  renderer = new THREE.WebGLRenderer();
+navigator.getUserMedia = ( navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
+
+if (navigator.getUserMedia) {
+   console.log('getUserMedia supported.');
+   navigator.getUserMedia (
+      // constraints - only audio needed for this app
+      {
+         audio: false,
+         video: true
+      },
+
+      // Success callback
+      function(stream) {
+      
+        var videoURL = window.URL.createObjectURL(stream);
+        var video = document.createElement('video');
+        video.src = videoURL;
+        video.onloadedmetadata = function() {
+        video.play(); 
+        init(video);
+        render();
+        };
+      },
+
+      // Error callback
+      function(err) {
+         console.log('The following gUM error occured: ' + err);
+      }
+   );
+} else {
+   console.log('getUserMedia not supported on your browser!');
+}
+
+function init(_video){
+  renderer = new THREE.WebGLRenderer({antialias:true});
   renderer.setSize( window.innerWidth, window.innerHeight );
   renderer.setClearColor (0xffffff, 1);
   document.body.appendChild( renderer.domElement );
@@ -25,9 +62,15 @@ function init(){
             controls.minPolarAngle = 0; // radians
             controls.maxPolarAngle = Math.PI*2
 
-  camera.position.z = -2;
+  camera.position.z = -20;
+  camera.position.y = 10;
+  texture = new THREE.VideoTexture( _video );
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.format = THREE.RGBFormat;
 
   uniforms = {
+        webcam: { type: "t", value: texture},
         u_time: { type: "f", value: 1.0 },
         u_resolution: { type: "v2", value: new THREE.Vector2() },
         u_mouse: { type: "v2", value: new THREE.Vector2() },
@@ -76,13 +119,28 @@ function init(){
 
   material = new THREE.ShaderMaterial( {
       uniforms: uniforms,
-      vertexShader: glslify(["#define GLSLIFY 1\nvarying vec2 vUv;\nvarying vec3 vNormal;\nuniform float amp0;\nuniform float amp1;\nuniform float amp2;\nuniform float amp3;\nuniform float amp4;\nuniform float amp5;\nuniform float amp6;\nuniform float amp7;\n\nuniform float amp8;\nuniform float amp9;\nuniform float amp10;\nuniform float amp11;\nuniform float amp12;\nuniform float amp13;\nuniform float amp14;\nuniform float amp15;\n\nuniform float amp16;\nuniform float amp17;\nuniform float amp18;\nuniform float amp19;\nuniform float amp20;\nuniform float amp21;\nuniform float amp22;\nuniform float amp23;\n\nuniform float amp24;\nuniform float amp25;\nuniform float amp26;\nuniform float amp27;\nuniform float amp28;\nuniform float amp29;\nuniform float amp30;\nuniform float amp31;\n\nfloat amps[32];\n\nfloat getData(int id) {\n    for (int i=0; i<32; i++) {\n        if (i == id) return amps[i];\n    }\n}\n\nvoid main()\n{\n\n\tfloat numberSections = 32.;\n    \n    amps[0] = amp0;\n    amps[1] = amp1;\n    amps[2] = amp2;\n    amps[3] = amp3;\n    amps[4] = amp4;\n    amps[5] = amp5;\n    amps[6] = amp6;\n    amps[7] = amp7;\n\n    amps[8] = amp8;\n    amps[9] = amp9;\n    amps[10] = amp10;\n    amps[11] = amp11;\n    amps[12] = amp12;\n    amps[13] = amp13;\n    amps[14] = amp14;\n    amps[15] = amp15;\n\n    amps[16] = amp16;\n    amps[17] = amp17;\n    amps[18] = amp18;\n    amps[19] = amp19;\n    amps[20] = amp20;\n    amps[21] = amp21;\n    amps[22] = amp22;\n    amps[23] = amp23;\n\n    amps[24] = amp24;\n    amps[25] = amp25;\n    amps[26] = amp26;\n    amps[27] = amp27;\n    amps[28] = amp28;\n    amps[29] = amp29;\n    amps[30] = amp30;\n    amps[31] = amp31;\n\n\tvUv = uv;\n\tvec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );\n\t//vNormal = normalMatrix * normal;\n\tvNormal = normal;\n\t\n\t\n\tvec4 originalPosition = projectionMatrix * mvPosition;\n\tint section = int(floor(vNormal.y*numberSections));\n\n\tfloat multiplier = getData(section);\n\tvec4 newPosition = projectionMatrix * mvPosition;\n\tnewPosition.y += multiplier*.0025;\n\tgl_Position = newPosition;\n\t//gl_Position = mvPosition;\n}"]),
-      fragmentShader: glslify(["#define GLSLIFY 1\n//#extension GL_OES_standard_derivatives : enable\n\nvarying vec3 vNormal;\nvarying vec2 vUv;\nuniform vec2 u_resolution;\n\n//#pragma glslify: snoise3 = require(glsl-noise/simplex/3d);\n//\n// Description : Array and textureless GLSL 2D/3D/4D simplex\n//               noise functions.\n//      Author : Ian McEwan, Ashima Arts.\n//  Maintainer : ijm\n//     Lastmod : 20110822 (ijm)\n//     License : Copyright (C) 2011 Ashima Arts. All rights reserved.\n//               Distributed under the MIT License. See LICENSE file.\n//               https://github.com/ashima/webgl-noise\n//\n\nvec4 mod289(vec4 x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0; }\n\nfloat mod289(float x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0; }\n\nvec4 permute(vec4 x) {\n     return mod289(((x*34.0)+1.0)*x);\n}\n\nfloat permute(float x) {\n     return mod289(((x*34.0)+1.0)*x);\n}\n\nvec4 taylorInvSqrt(vec4 r)\n{\n  return 1.79284291400159 - 0.85373472095314 * r;\n}\n\nfloat taylorInvSqrt(float r)\n{\n  return 1.79284291400159 - 0.85373472095314 * r;\n}\n\nvec4 grad4(float j, vec4 ip)\n  {\n  const vec4 ones = vec4(1.0, 1.0, 1.0, -1.0);\n  vec4 p,s;\n\n  p.xyz = floor( fract (vec3(j) * ip.xyz) * 7.0) * ip.z - 1.0;\n  p.w = 1.5 - dot(abs(p.xyz), ones.xyz);\n  s = vec4(lessThan(p, vec4(0.0)));\n  p.xyz = p.xyz + (s.xyz*2.0 - 1.0) * s.www;\n\n  return p;\n  }\n\n// (sqrt(5) - 1)/4 = F4, used once below\n#define F4 0.309016994374947451\n\nfloat snoise(vec4 v)\n  {\n  const vec4  C = vec4( 0.138196601125011,  // (5 - sqrt(5))/20  G4\n                        0.276393202250021,  // 2 * G4\n                        0.414589803375032,  // 3 * G4\n                       -0.447213595499958); // -1 + 4 * G4\n\n// First corner\n  vec4 i  = floor(v + dot(v, vec4(F4)) );\n  vec4 x0 = v -   i + dot(i, C.xxxx);\n\n// Other corners\n\n// Rank sorting originally contributed by Bill Licea-Kane, AMD (formerly ATI)\n  vec4 i0;\n  vec3 isX = step( x0.yzw, x0.xxx );\n  vec3 isYZ = step( x0.zww, x0.yyz );\n//  i0.x = dot( isX, vec3( 1.0 ) );\n  i0.x = isX.x + isX.y + isX.z;\n  i0.yzw = 1.0 - isX;\n//  i0.y += dot( isYZ.xy, vec2( 1.0 ) );\n  i0.y += isYZ.x + isYZ.y;\n  i0.zw += 1.0 - isYZ.xy;\n  i0.z += isYZ.z;\n  i0.w += 1.0 - isYZ.z;\n\n  // i0 now contains the unique values 0,1,2,3 in each channel\n  vec4 i3 = clamp( i0, 0.0, 1.0 );\n  vec4 i2 = clamp( i0-1.0, 0.0, 1.0 );\n  vec4 i1 = clamp( i0-2.0, 0.0, 1.0 );\n\n  //  x0 = x0 - 0.0 + 0.0 * C.xxxx\n  //  x1 = x0 - i1  + 1.0 * C.xxxx\n  //  x2 = x0 - i2  + 2.0 * C.xxxx\n  //  x3 = x0 - i3  + 3.0 * C.xxxx\n  //  x4 = x0 - 1.0 + 4.0 * C.xxxx\n  vec4 x1 = x0 - i1 + C.xxxx;\n  vec4 x2 = x0 - i2 + C.yyyy;\n  vec4 x3 = x0 - i3 + C.zzzz;\n  vec4 x4 = x0 + C.wwww;\n\n// Permutations\n  i = mod289(i);\n  float j0 = permute( permute( permute( permute(i.w) + i.z) + i.y) + i.x);\n  vec4 j1 = permute( permute( permute( permute (\n             i.w + vec4(i1.w, i2.w, i3.w, 1.0 ))\n           + i.z + vec4(i1.z, i2.z, i3.z, 1.0 ))\n           + i.y + vec4(i1.y, i2.y, i3.y, 1.0 ))\n           + i.x + vec4(i1.x, i2.x, i3.x, 1.0 ));\n\n// Gradients: 7x7x6 points over a cube, mapped onto a 4-cross polytope\n// 7*7*6 = 294, which is close to the ring size 17*17 = 289.\n  vec4 ip = vec4(1.0/294.0, 1.0/49.0, 1.0/7.0, 0.0) ;\n\n  vec4 p0 = grad4(j0,   ip);\n  vec4 p1 = grad4(j1.x, ip);\n  vec4 p2 = grad4(j1.y, ip);\n  vec4 p3 = grad4(j1.z, ip);\n  vec4 p4 = grad4(j1.w, ip);\n\n// Normalise gradients\n  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));\n  p0 *= norm.x;\n  p1 *= norm.y;\n  p2 *= norm.z;\n  p3 *= norm.w;\n  p4 *= taylorInvSqrt(dot(p4,p4));\n\n// Mix contributions from the five corners\n  vec3 m0 = max(0.6 - vec3(dot(x0,x0), dot(x1,x1), dot(x2,x2)), 0.0);\n  vec2 m1 = max(0.6 - vec2(dot(x3,x3), dot(x4,x4)            ), 0.0);\n  m0 = m0 * m0;\n  m1 = m1 * m1;\n  return 49.0 * ( dot(m0*m0, vec3( dot( p0, x0 ), dot( p1, x1 ), dot( p2, x2 )))\n               + dot(m1*m1, vec2( dot( p3, x3 ), dot( p4, x4 ) ) ) ) ;\n\n  }\n\nuniform float u_time;\n\nuniform float amplitude;\nuniform float noise_stage;\n\nvoid main() {\n    vec2 st = gl_FragCoord.xy/u_resolution.xy;\n    //\n    //float numberSections = 8.;\n   \n    //float appliedAmp = log(getData(section)/128.)*pow(amplitude,4.);\n\n    float noise = snoise(vec4(vNormal.x,vNormal.y,vNormal.z,(u_time*.01)+noise_stage*.025));\n    //float noise = snoise(vec3(vNormal));\n    float originalNoise = noise;\n    noise = (noise+1.)/2.;\n    noise=floor(mod(noise*50.,2.));\n\n    vec3 noiseMix = vec3(noise+((originalNoise)/2.));\n    vec3 lightSource = vec3(sin(u_time*.025),.1,cos(u_time*.025));\n    vec3 color = noiseMix+(dot(vNormal,lightSource)/2.);\n    gl_FragColor=vec4(vec3(color+.1),1.0);\n}"]),
+      vertexShader: glslify(["#define GLSLIFY 1\nvarying vec2 vUv;\nvarying vec3 vNormal;\nuniform float amp0;\nuniform float amp1;\nuniform float amp2;\nuniform float amp3;\nuniform float amp4;\nuniform float amp5;\nuniform float amp6;\nuniform float amp7;\n\nuniform float amp8;\nuniform float amp9;\nuniform float amp10;\nuniform float amp11;\nuniform float amp12;\nuniform float amp13;\nuniform float amp14;\nuniform float amp15;\n\nuniform float amp16;\nuniform float amp17;\nuniform float amp18;\nuniform float amp19;\nuniform float amp20;\nuniform float amp21;\nuniform float amp22;\nuniform float amp23;\n\nuniform float amp24;\nuniform float amp25;\nuniform float amp26;\nuniform float amp27;\nuniform float amp28;\nuniform float amp29;\nuniform float amp30;\nuniform float amp31;\n\nfloat amps[32];\n\nfloat getData(int id) {\n    for (int i=0; i<32; i++) {\n        if (i == id) return amps[i];\n    }\n}\n\nvoid main()\n{\n\n\tfloat numberSections = 32.;\n    \n    amps[0] = amp0;\n    amps[1] = amp1;\n    amps[2] = amp2;\n    amps[3] = amp3;\n    amps[4] = amp4;\n    amps[5] = amp5;\n    amps[6] = amp6;\n    amps[7] = amp7;\n\n    amps[8] = amp8;\n    amps[9] = amp9;\n    amps[10] = amp10;\n    amps[11] = amp11;\n    amps[12] = amp12;\n    amps[13] = amp13;\n    amps[14] = amp14;\n    amps[15] = amp15;\n\n    amps[16] = amp16;\n    amps[17] = amp17;\n    amps[18] = amp18;\n    amps[19] = amp19;\n    amps[20] = amp20;\n    amps[21] = amp21;\n    amps[22] = amp22;\n    amps[23] = amp23;\n\n    amps[24] = amp24;\n    amps[25] = amp25;\n    amps[26] = amp26;\n    amps[27] = amp27;\n    amps[28] = amp28;\n    amps[29] = amp29;\n    amps[30] = amp30;\n    amps[31] = amp31;\n\n\tvUv = uv;\n\tvec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );\n\t//vNormal = normalMatrix * normal;\n\tvNormal = normal;\n\t\n\t\n\tvec4 originalPosition = projectionMatrix * mvPosition;\n\tint section = int(floor(((vNormal.y+1.)*.5)*numberSections));\n\n\tfloat multiplier = getData(section);\n\tvec4 newPosition = projectionMatrix * mvPosition;\n\tnewPosition.y += multiplier*.02;\n\tgl_Position = newPosition;\n\t//gl_Position = mvPosition;\n}"]),
+      fragmentShader: glslify(["#define GLSLIFY 1\n//#extension GL_OES_standard_derivatives : enable\n\nvarying vec3 vNormal;\nvarying vec2 vUv;\nuniform vec2 u_resolution;\n\n//#pragma glslify: snoise3 = require(glsl-noise/simplex/3d);\n//\n// Description : Array and textureless GLSL 2D/3D/4D simplex\n//               noise functions.\n//      Author : Ian McEwan, Ashima Arts.\n//  Maintainer : ijm\n//     Lastmod : 20110822 (ijm)\n//     License : Copyright (C) 2011 Ashima Arts. All rights reserved.\n//               Distributed under the MIT License. See LICENSE file.\n//               https://github.com/ashima/webgl-noise\n//\n\nvec4 mod289(vec4 x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0; }\n\nfloat mod289(float x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0; }\n\nvec4 permute(vec4 x) {\n     return mod289(((x*34.0)+1.0)*x);\n}\n\nfloat permute(float x) {\n     return mod289(((x*34.0)+1.0)*x);\n}\n\nvec4 taylorInvSqrt(vec4 r)\n{\n  return 1.79284291400159 - 0.85373472095314 * r;\n}\n\nfloat taylorInvSqrt(float r)\n{\n  return 1.79284291400159 - 0.85373472095314 * r;\n}\n\nvec4 grad4(float j, vec4 ip)\n  {\n  const vec4 ones = vec4(1.0, 1.0, 1.0, -1.0);\n  vec4 p,s;\n\n  p.xyz = floor( fract (vec3(j) * ip.xyz) * 7.0) * ip.z - 1.0;\n  p.w = 1.5 - dot(abs(p.xyz), ones.xyz);\n  s = vec4(lessThan(p, vec4(0.0)));\n  p.xyz = p.xyz + (s.xyz*2.0 - 1.0) * s.www;\n\n  return p;\n  }\n\n// (sqrt(5) - 1)/4 = F4, used once below\n#define F4 0.309016994374947451\n\nfloat snoise(vec4 v)\n  {\n  const vec4  C = vec4( 0.138196601125011,  // (5 - sqrt(5))/20  G4\n                        0.276393202250021,  // 2 * G4\n                        0.414589803375032,  // 3 * G4\n                       -0.447213595499958); // -1 + 4 * G4\n\n// First corner\n  vec4 i  = floor(v + dot(v, vec4(F4)) );\n  vec4 x0 = v -   i + dot(i, C.xxxx);\n\n// Other corners\n\n// Rank sorting originally contributed by Bill Licea-Kane, AMD (formerly ATI)\n  vec4 i0;\n  vec3 isX = step( x0.yzw, x0.xxx );\n  vec3 isYZ = step( x0.zww, x0.yyz );\n//  i0.x = dot( isX, vec3( 1.0 ) );\n  i0.x = isX.x + isX.y + isX.z;\n  i0.yzw = 1.0 - isX;\n//  i0.y += dot( isYZ.xy, vec2( 1.0 ) );\n  i0.y += isYZ.x + isYZ.y;\n  i0.zw += 1.0 - isYZ.xy;\n  i0.z += isYZ.z;\n  i0.w += 1.0 - isYZ.z;\n\n  // i0 now contains the unique values 0,1,2,3 in each channel\n  vec4 i3 = clamp( i0, 0.0, 1.0 );\n  vec4 i2 = clamp( i0-1.0, 0.0, 1.0 );\n  vec4 i1 = clamp( i0-2.0, 0.0, 1.0 );\n\n  //  x0 = x0 - 0.0 + 0.0 * C.xxxx\n  //  x1 = x0 - i1  + 1.0 * C.xxxx\n  //  x2 = x0 - i2  + 2.0 * C.xxxx\n  //  x3 = x0 - i3  + 3.0 * C.xxxx\n  //  x4 = x0 - 1.0 + 4.0 * C.xxxx\n  vec4 x1 = x0 - i1 + C.xxxx;\n  vec4 x2 = x0 - i2 + C.yyyy;\n  vec4 x3 = x0 - i3 + C.zzzz;\n  vec4 x4 = x0 + C.wwww;\n\n// Permutations\n  i = mod289(i);\n  float j0 = permute( permute( permute( permute(i.w) + i.z) + i.y) + i.x);\n  vec4 j1 = permute( permute( permute( permute (\n             i.w + vec4(i1.w, i2.w, i3.w, 1.0 ))\n           + i.z + vec4(i1.z, i2.z, i3.z, 1.0 ))\n           + i.y + vec4(i1.y, i2.y, i3.y, 1.0 ))\n           + i.x + vec4(i1.x, i2.x, i3.x, 1.0 ));\n\n// Gradients: 7x7x6 points over a cube, mapped onto a 4-cross polytope\n// 7*7*6 = 294, which is close to the ring size 17*17 = 289.\n  vec4 ip = vec4(1.0/294.0, 1.0/49.0, 1.0/7.0, 0.0) ;\n\n  vec4 p0 = grad4(j0,   ip);\n  vec4 p1 = grad4(j1.x, ip);\n  vec4 p2 = grad4(j1.y, ip);\n  vec4 p3 = grad4(j1.z, ip);\n  vec4 p4 = grad4(j1.w, ip);\n\n// Normalise gradients\n  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));\n  p0 *= norm.x;\n  p1 *= norm.y;\n  p2 *= norm.z;\n  p3 *= norm.w;\n  p4 *= taylorInvSqrt(dot(p4,p4));\n\n// Mix contributions from the five corners\n  vec3 m0 = max(0.6 - vec3(dot(x0,x0), dot(x1,x1), dot(x2,x2)), 0.0);\n  vec2 m1 = max(0.6 - vec2(dot(x3,x3), dot(x4,x4)            ), 0.0);\n  m0 = m0 * m0;\n  m1 = m1 * m1;\n  return 49.0 * ( dot(m0*m0, vec3( dot( p0, x0 ), dot( p1, x1 ), dot( p2, x2 )))\n               + dot(m1*m1, vec2( dot( p3, x3 ), dot( p4, x4 ) ) ) ) ;\n\n  }\n\nuniform float u_time;\n\nuniform sampler2D webcam;\n\nuniform float amplitude;\nuniform float noise_stage;\n\nvoid main() {\n    vec2 st = gl_FragCoord.xy/u_resolution.xy;\n    //\n    //float numberSections = 8.;\n   \n    //float appliedAmp = log(getData(section)/128.)*pow(amplitude,4.);\n\n    float noiseR = snoise(vec4(vNormal.x,vNormal.y,vNormal.z,(u_time*.01)+noise_stage*.025));\n    float noiseG = snoise(vec4(vNormal.x,vNormal.y,vNormal.z,100.+(u_time*.01)+noise_stage*.025));\n    float noiseB = snoise(vec4(vNormal.x,vNormal.y,vNormal.z,1000.+(u_time*.01)+noise_stage*.025));\n    //float noise = snoise(vec3(vNormal));\n    float originalNoise = noiseR;\n    vec3 noises=vec3(noiseR,noiseG,noiseB);\n    noises = (noises+2.)/2.;\n    //noises = pow(noises,2.);\n    //noises=mod(noises*5.,2.);\n    vec3 random;\n    //if(noiseR>.5)\n    vec3 camColor = texture2D( webcam, vec2(vUv.x,vUv.y) ).rgb;\n    vec3 noiseMix = noises;\n    vec3 lightSource = vec3(sin(u_time*.025),.1,cos(u_time*.025));\n    vec3 color = noiseMix*(dot(vNormal,lightSource));\n    gl_FragColor= vec4(camColor*noises,1.0);//vec4(vec3(color+.5),1.0);\n}"]),
       side: THREE.DoubleSide  
   } );
+  geometry.computeFaceNormals();
+  geometry.computeVertexNormals();
+  //material = new THREE.MeshBasicMaterial( {color:0xff0000} );
+  var spread = 5;
+  var scaleMax = 5;
+  var number = 50;
+  parent = new THREE.Object3D();
+  for(var m=0;m<number;m++){
+    var posx=(Math.random()*2-1)*spread;
+    var posy=(Math.random()*2-1)*spread;
+    var posz=(Math.random()*2-1)*spread;
+    var _scale = (Math.random()*2-1)*scaleMax;
+    createMesh(geometry, material, new THREE.Vector3( posx,posy, posz ),new THREE.Vector3( posx,posy, posz ),_scale,parent);
+  }
+  
+  scene.add(parent);
 
-  cube = new THREE.Mesh( geometry, material );
-  scene.add( cube );
+  //console.log(parent.children)
 
     var Analyser = require('gl-audio-analyser');
     var audio    = document.getElementById('audio-src');
@@ -93,12 +151,16 @@ function init(){
   // scene.add( light );
 }
 
-function update(){
-  //cube.rotation.x += 0.01;
-  cube.rotation.y += 0.01;
-  controls.update();
-  //renderer.render(scene, camera);
+function createMesh(_geometry, _material, _position, _rotation, _scale, _parent){
+  var _mesh = new THREE.Mesh( _geometry, _material );
+  _mesh.position.set(_position.x,_position.y,_position.z);
+  _mesh.rotation.set(_rotation.x,_rotation.y,_rotation.z);
+  _mesh.scale.set(_scale,_scale,_scale);
+  _parent.add( _mesh );
+ 
+  //console.log(_mesh)
 }
+
 
 var numSections = 32;
 var averageAmp = 0;
@@ -124,9 +186,17 @@ function largest(_array){
   return largest
 }
 var noise_stage = 0;
-
+var js_noise_stage = 0;
+var noise_value;
 function render() {
-    update();
+  js_noise_stage+=.01;
+  
+  //console.log(noise_value)
+  requestAnimationFrame( render );
+    texture.needsUpdate = true;
+     //controls.rotateUp(noise.perlin2(.1, js_noise_stage));
+    controls.update();
+
     waveform = analyser.waveform();
     freq = analyser.frequencies();
 
@@ -140,10 +210,20 @@ function render() {
       uniforms['amp'+i].value = (freq[i*2]+freq[(i*2)+1])/2;
     }
     
+    for(var s = 0; s<parent.children.length;s++){
+      noise_value = noise.perlin2(s*.1, js_noise_stage);
+      parent.children[s].position.x = noise_value*10;
+      noise_value = noise.perlin2(s*.34, js_noise_stage);
+      parent.children[s].position.y = noise_value*10;
+      noise_value = noise.perlin2(s*.77, js_noise_stage);
+      parent.children[s].position.z = noise_value*10;
+    }
 
+    parent.rotateX(noise.perlin2(.31, js_noise_stage)*.1)
+    parent.rotateY(noise.perlin2(.52, js_noise_stage)*.1)
     uniforms.u_time.value += 0.05;
     renderer.render( scene, camera );
-    requestAnimationFrame( render );
+    
 }
 
 // function render(){
@@ -151,8 +231,7 @@ function render() {
 //   requestAnimationFrame( render );
 // }
 
-init();
-render();
+
 
 window.addEventListener('resize', function(){
 
@@ -533,7 +612,7 @@ window.addEventListener('resize', function(){
 
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"gl-audio-analyser":6,"gl-shader":20,"glslify":46,"three":48,"three-orbit-controls":47}],2:[function(require,module,exports){
+},{"fantasy-map-noise":6,"gl-audio-analyser":7,"gl-shader":21,"glslify":47,"three":49,"three-orbit-controls":48}],2:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -2536,6 +2615,329 @@ module.exports = Array.isArray || function (arr) {
 };
 
 },{}],6:[function(require,module,exports){
+(function webpackUniversalModuleDefinition(root, factory) {
+	if(typeof exports === 'object' && typeof module === 'object')
+		module.exports = factory();
+	else if(typeof define === 'function' && define.amd)
+		define([], factory);
+	else {
+		var a = factory();
+		for(var i in a) (typeof exports === 'object' ? exports : root)[i] = a[i];
+	}
+})(this, function() {
+return /******/ (function(modules) { // webpackBootstrap
+/******/ 	// The module cache
+/******/ 	var installedModules = {};
+/******/
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/
+/******/ 		// Check if module is in cache
+/******/ 		if(installedModules[moduleId])
+/******/ 			return installedModules[moduleId].exports;
+/******/
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = installedModules[moduleId] = {
+/******/ 			i: moduleId,
+/******/ 			l: false,
+/******/ 			exports: {}
+/******/ 		};
+/******/
+/******/ 		// Execute the module function
+/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/
+/******/ 		// Flag the module as loaded
+/******/ 		module.l = true;
+/******/
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/
+/******/
+/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	__webpack_require__.m = modules;
+/******/
+/******/ 	// expose the module cache
+/******/ 	__webpack_require__.c = installedModules;
+/******/
+/******/ 	// identity function for calling harmony imports with the correct context
+/******/ 	__webpack_require__.i = function(value) { return value; };
+/******/
+/******/ 	// define getter function for harmony exports
+/******/ 	__webpack_require__.d = function(exports, name, getter) {
+/******/ 		if(!__webpack_require__.o(exports, name)) {
+/******/ 			Object.defineProperty(exports, name, {
+/******/ 				configurable: false,
+/******/ 				enumerable: true,
+/******/ 				get: getter
+/******/ 			});
+/******/ 		}
+/******/ 	};
+/******/
+/******/ 	// getDefaultExport function for compatibility with non-harmony modules
+/******/ 	__webpack_require__.n = function(module) {
+/******/ 		var getter = module && module.__esModule ?
+/******/ 			function getDefault() { return module['default']; } :
+/******/ 			function getModuleExports() { return module; };
+/******/ 		__webpack_require__.d(getter, 'a', getter);
+/******/ 		return getter;
+/******/ 	};
+/******/
+/******/ 	// Object.prototype.hasOwnProperty.call
+/******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
+/******/
+/******/ 	// __webpack_public_path__
+/******/ 	__webpack_require__.p = "./dist/";
+/******/
+/******/ 	// Load entry module and return exports
+/******/ 	return __webpack_require__(__webpack_require__.s = 6);
+/******/ })
+/************************************************************************/
+/******/ ([
+/* 0 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__Grad__ = __webpack_require__(2);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return perm; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return gradP; });
+
+
+var grad3 = [new __WEBPACK_IMPORTED_MODULE_0__Grad__["a" /* default */](1, 1, 0), new __WEBPACK_IMPORTED_MODULE_0__Grad__["a" /* default */](-1, 1, 0), new __WEBPACK_IMPORTED_MODULE_0__Grad__["a" /* default */](1, -1, 0), new __WEBPACK_IMPORTED_MODULE_0__Grad__["a" /* default */](-1, -1, 0),
+    new __WEBPACK_IMPORTED_MODULE_0__Grad__["a" /* default */](1, 0, 1), new __WEBPACK_IMPORTED_MODULE_0__Grad__["a" /* default */](-1, 0, 1), new __WEBPACK_IMPORTED_MODULE_0__Grad__["a" /* default */](1, 0, -1), new __WEBPACK_IMPORTED_MODULE_0__Grad__["a" /* default */](-1, 0, -1),
+    new __WEBPACK_IMPORTED_MODULE_0__Grad__["a" /* default */](0, 1, 1), new __WEBPACK_IMPORTED_MODULE_0__Grad__["a" /* default */](0, -1, 1), new __WEBPACK_IMPORTED_MODULE_0__Grad__["a" /* default */](0, 1, -1), new __WEBPACK_IMPORTED_MODULE_0__Grad__["a" /* default */](0, -1, -1)];
+
+var p = [151, 160, 137, 91, 90, 15,
+    131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30, 69, 142, 8, 99, 37, 240, 21, 10, 23,
+    190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94, 252, 219, 203, 117, 35, 11, 32, 57, 177, 33,
+    88, 237, 149, 56, 87, 174, 20, 125, 136, 171, 168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166,
+    77, 146, 158, 231, 83, 111, 229, 122, 60, 211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244,
+    102, 143, 54, 65, 25, 63, 161, 1, 216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196,
+    135, 130, 116, 188, 159, 86, 164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123,
+    5, 202, 38, 147, 118, 126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42,
+    223, 183, 170, 213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9,
+    129, 22, 39, 253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228,
+    251, 34, 242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107,
+    49, 192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
+    138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180];
+// To remove the need for index wrapping, double the permutation table length
+var perm = new Array(512);
+var gradP = new Array(512);
+
+// This isn't a very good seeding function, but it works ok. It supports 2^16
+// different seed values. Write something better if you need more seeds.
+function seed(seed) {
+    if(seed > 0 && seed < 1){
+        // Scale the seed out
+        seed *= 65536;
+    }
+
+    seed = Math.floor(seed);
+    if(seed < 256){
+        seed |= seed << 8;
+    }
+
+    for(var i = 0; i < 256; i++){
+        var v;
+        if(i & 1){
+            v = p[i] ^ (seed & 255);
+        }
+        else{
+            v = p[i] ^ ((seed >> 8) & 255);
+        }
+
+        perm[i] = perm[i + 256] = v;
+        gradP[i] = gradP[i + 256] = grad3[v % 12];
+    }
+}
+
+seed(0);
+
+
+// export gradP;
+
+
+/***/ }),
+/* 1 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__perlin2__ = __webpack_require__(4);
+/* harmony reexport (binding) */ __webpack_require__.d(__webpack_exports__, "perlin2", function() { return __WEBPACK_IMPORTED_MODULE_0__perlin2__["a"]; });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__simplex2__ = __webpack_require__(5);
+/* harmony reexport (binding) */ __webpack_require__.d(__webpack_exports__, "simplex2", function() { return __WEBPACK_IMPORTED_MODULE_1__simplex2__["a"]; });
+
+
+
+
+/***/ }),
+/* 2 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+function Grad(x, y, z) {
+    this.x = x;
+    this.y = y;
+    this.z = z;
+}
+Grad.prototype.dot2 = function(x, y) {
+    return this.x * x + this.y * y;
+};
+
+Grad.prototype.dot3 = function(x, y, z) {
+    return this.x * x + this.y * y + this.z * z;
+};
+
+/* harmony default export */ __webpack_exports__["a"] = Grad;
+
+
+/***/ }),
+/* 3 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return F2; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return G2; });
+// Skewing and unskewing factors for 2, 3, and 4 dimensions
+var F2 = 0.5 * (Math.sqrt(3) - 1);
+var G2 = (3 - Math.sqrt(3)) / 6;
+
+
+/***/ }),
+/* 4 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__seed__ = __webpack_require__(0);
+/* harmony export (immutable) */ __webpack_exports__["a"] = perlin2;
+
+
+// 2D Perlin Noise
+function fade(t) {
+    return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+function lerp(a, b, t) {
+    return ((1 - t) * a + t * b);
+}
+
+function perlin2(x, y) {
+    // Find unit grid cell containing point
+    var X = Math.floor(x);
+    var Y = Math.floor(y);
+    // Get relative xy coordinates of point within that cell
+    x = x - X;
+    y = y - Y;
+    // Wrap the integer cells at 255 (smaller integer period can be introduced here)
+    X = X & 255;
+    Y = Y & 255;
+
+    // Calculate noise contributions from each of the four corners
+    var n00 = __WEBPACK_IMPORTED_MODULE_0__seed__["a" /* gradP */][X + __WEBPACK_IMPORTED_MODULE_0__seed__["b" /* perm */][Y]].dot2(x, y);
+    var n01 = __WEBPACK_IMPORTED_MODULE_0__seed__["a" /* gradP */][X + __WEBPACK_IMPORTED_MODULE_0__seed__["b" /* perm */][Y + 1]].dot2(x, y - 1);
+    var n10 = __WEBPACK_IMPORTED_MODULE_0__seed__["a" /* gradP */][X + 1 + __WEBPACK_IMPORTED_MODULE_0__seed__["b" /* perm */][Y]].dot2(x - 1, y);
+    var n11 = __WEBPACK_IMPORTED_MODULE_0__seed__["a" /* gradP */][X + 1 + __WEBPACK_IMPORTED_MODULE_0__seed__["b" /* perm */][Y + 1]].dot2(x - 1, y - 1);
+
+    // Compute the fade curve value for x
+    var u = fade(x);
+
+    // Interpolate the four results
+    return lerp(
+        lerp(n00, n10, u),
+        lerp(n01, n11, u),
+        fade(y));
+}
+
+
+/***/ }),
+/* 5 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__constants__ = __webpack_require__(3);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__seed__ = __webpack_require__(0);
+/* harmony export (immutable) */ __webpack_exports__["a"] = simplex2;
+
+
+
+// 2D simplex noise
+function simplex2(xin, yin) {
+    var n0, n1, n2; // Noise contributions from the three corners
+    // Skew the input space to determine which simplex cell we're in
+    var s = (xin + yin) * __WEBPACK_IMPORTED_MODULE_0__constants__["a" /* F2 */]; // Hairy factor for 2D
+    var i = Math.floor(xin + s);
+    var j = Math.floor(yin + s);
+    var t = (i + j) * __WEBPACK_IMPORTED_MODULE_0__constants__["b" /* G2 */];
+    var x0 = xin - i + t; // The x,y distances from the cell origin, unskewed.
+    var y0 = yin - j + t;
+    // For the 2D case, the simplex shape is an equilateral triangle.
+    // Determine which simplex we are in.
+    var i1, j1; // Offsets for second (middle) corner of simplex in (i,j) coords
+    if(x0 > y0){ // lower triangle, XY order: (0,0)->(1,0)->(1,1)
+        i1 = 1;
+        j1 = 0;
+    }
+    else{    // upper triangle, YX order: (0,0)->(0,1)->(1,1)
+        i1 = 0;
+        j1 = 1;
+    }
+    // A step of (1,0) in (i,j) means a step of (1-c,-c) in (x,y), and
+    // a step of (0,1) in (i,j) means a step of (-c,1-c) in (x,y), where
+    // c = (3-sqrt(3))/6
+    var x1 = x0 - i1 + __WEBPACK_IMPORTED_MODULE_0__constants__["b" /* G2 */]; // Offsets for middle corner in (x,y) unskewed coords
+    var y1 = y0 - j1 + __WEBPACK_IMPORTED_MODULE_0__constants__["b" /* G2 */];
+    var x2 = x0 - 1 + 2 * __WEBPACK_IMPORTED_MODULE_0__constants__["b" /* G2 */]; // Offsets for last corner in (x,y) unskewed coords
+    var y2 = y0 - 1 + 2 * __WEBPACK_IMPORTED_MODULE_0__constants__["b" /* G2 */];
+    // Work out the hashed gradient indices of the three simplex corners
+    i &= 255;
+    j &= 255;
+    var gi0 = __WEBPACK_IMPORTED_MODULE_1__seed__["a" /* gradP */][i + __WEBPACK_IMPORTED_MODULE_1__seed__["b" /* perm */][j]];
+    var gi1 = __WEBPACK_IMPORTED_MODULE_1__seed__["a" /* gradP */][i + i1 + __WEBPACK_IMPORTED_MODULE_1__seed__["b" /* perm */][j + j1]];
+    var gi2 = __WEBPACK_IMPORTED_MODULE_1__seed__["a" /* gradP */][i + 1 + __WEBPACK_IMPORTED_MODULE_1__seed__["b" /* perm */][j + 1]];
+    // Calculate the contribution from the three corners
+    var t0 = 0.5 - x0 * x0 - y0 * y0;
+    if(t0 < 0){
+        n0 = 0;
+    }
+    else{
+        t0 *= t0;
+        n0 = t0 * t0 * gi0.dot2(x0, y0);  // (x,y) of grad3 used for 2D gradient
+    }
+    var t1 = 0.5 - x1 * x1 - y1 * y1;
+    if(t1 < 0){
+        n1 = 0;
+    }
+    else{
+        t1 *= t1;
+        n1 = t1 * t1 * gi1.dot2(x1, y1);
+    }
+    var t2 = 0.5 - x2 * x2 - y2 * y2;
+    if(t2 < 0){
+        n2 = 0;
+    }
+    else{
+        t2 *= t2;
+        n2 = t2 * t2 * gi2.dot2(x2, y2);
+    }
+    // Add contributions from each corner to get the final noise value.
+    // The result is scaled to return values in the interval [-1,1].
+    return 70 * (n0 + n1 + n2);
+}
+
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+module.exports = __webpack_require__(1);
+
+
+/***/ })
+/******/ ]);
+});
+
+},{}],7:[function(require,module,exports){
 var Analyser = require('web-audio-analyser')
 var Texture  = require('gl-texture2d')
 var ndarray  = require('ndarray')
@@ -2595,7 +2997,7 @@ GLAudioAnalyser.prototype.bindFrequencies = function(index) {
   return retVal
 }
 
-},{"gl-texture2d":15,"ndarray":16,"web-audio-analyser":19}],7:[function(require,module,exports){
+},{"gl-texture2d":16,"ndarray":17,"web-audio-analyser":20}],8:[function(require,module,exports){
 "use strict"
 
 var compile = require("cwise-compiler")
@@ -3058,7 +3460,7 @@ exports.equals = compile({
 
 
 
-},{"cwise-compiler":8}],8:[function(require,module,exports){
+},{"cwise-compiler":9}],9:[function(require,module,exports){
 "use strict"
 
 var createThunk = require("./lib/thunk.js")
@@ -3169,7 +3571,7 @@ function compileCwise(user_args) {
 
 module.exports = compileCwise
 
-},{"./lib/thunk.js":10}],9:[function(require,module,exports){
+},{"./lib/thunk.js":11}],10:[function(require,module,exports){
 "use strict"
 
 var uniq = require("uniq")
@@ -3525,7 +3927,7 @@ function generateCWiseOp(proc, typesig) {
 }
 module.exports = generateCWiseOp
 
-},{"uniq":11}],10:[function(require,module,exports){
+},{"uniq":12}],11:[function(require,module,exports){
 "use strict"
 
 // The function below is called when constructing a cwise function object, and does the following:
@@ -3613,7 +4015,7 @@ function createThunk(proc) {
 
 module.exports = createThunk
 
-},{"./compile.js":9}],11:[function(require,module,exports){
+},{"./compile.js":10}],12:[function(require,module,exports){
 "use strict"
 
 function unique_pred(list, compare) {
@@ -3672,7 +4074,7 @@ function unique(list, compare, sorted) {
 
 module.exports = unique
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 /**
  * Bit twiddling hacks for JavaScript.
  *
@@ -3878,7 +4280,7 @@ exports.nextCombination = function(v) {
 }
 
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 "use strict"
 
 function dupe_array(count, value, i) {
@@ -3928,7 +4330,7 @@ function dupe(count, value) {
 }
 
 module.exports = dupe
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 (function (global,Buffer){
 'use strict'
 
@@ -4145,7 +4547,7 @@ exports.clearCache = function clearCache() {
   }
 }
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("buffer").Buffer)
-},{"bit-twiddle":12,"buffer":2,"dup":13}],15:[function(require,module,exports){
+},{"bit-twiddle":13,"buffer":2,"dup":14}],16:[function(require,module,exports){
 'use strict'
 
 var ndarray = require('ndarray')
@@ -4708,7 +5110,7 @@ function createTexture2D(gl) {
   throw new Error('gl-texture2d: Invalid arguments for texture2d constructor')
 }
 
-},{"ndarray":16,"ndarray-ops":7,"typedarray-pool":14}],16:[function(require,module,exports){
+},{"ndarray":17,"ndarray-ops":8,"typedarray-pool":15}],17:[function(require,module,exports){
 var iota = require("iota-array")
 var isBuffer = require("is-buffer")
 
@@ -5053,7 +5455,7 @@ function wrappedNDArrayCtor(data, shape, stride, offset) {
 
 module.exports = wrappedNDArrayCtor
 
-},{"iota-array":17,"is-buffer":18}],17:[function(require,module,exports){
+},{"iota-array":18,"is-buffer":19}],18:[function(require,module,exports){
 "use strict"
 
 function iota(n) {
@@ -5065,7 +5467,7 @@ function iota(n) {
 }
 
 module.exports = iota
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -5088,7 +5490,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 var AudioContext = window.AudioContext || window.webkitAudioContext
 
 module.exports = WebAudioAnalyser
@@ -5168,7 +5570,7 @@ WebAudioAnalyser.prototype.frequencies = function(output, channel) {
   return output
 }
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict'
 
 var createUniformWrapper   = require('./lib/create-uniforms')
@@ -5434,7 +5836,7 @@ function createShader(
 
 module.exports = createShader
 
-},{"./lib/GLError":21,"./lib/create-attributes":22,"./lib/create-uniforms":23,"./lib/reflect":24,"./lib/runtime-reflect":25,"./lib/shader-cache":26}],21:[function(require,module,exports){
+},{"./lib/GLError":22,"./lib/create-attributes":23,"./lib/create-uniforms":24,"./lib/reflect":25,"./lib/runtime-reflect":26,"./lib/shader-cache":27}],22:[function(require,module,exports){
 function GLError (rawError, shortMessage, longMessage) {
     this.shortMessage = shortMessage || ''
     this.longMessage = longMessage || ''
@@ -5449,7 +5851,7 @@ GLError.prototype.name = 'GLError'
 GLError.prototype.constructor = GLError
 module.exports = GLError
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 'use strict'
 
 module.exports = createAttributeWrapper
@@ -5714,7 +6116,7 @@ function createAttributeWrapper(
   return obj
 }
 
-},{"./GLError":21}],23:[function(require,module,exports){
+},{"./GLError":22}],24:[function(require,module,exports){
 'use strict'
 
 var coallesceUniforms = require('./reflect')
@@ -5907,7 +6309,7 @@ function createUniformWrapper(gl, wrapper, uniforms, locations) {
   }
 }
 
-},{"./GLError":21,"./reflect":24}],24:[function(require,module,exports){
+},{"./GLError":22,"./reflect":25}],25:[function(require,module,exports){
 'use strict'
 
 module.exports = makeReflectTypes
@@ -5965,7 +6367,7 @@ function makeReflectTypes(uniforms, useIndex) {
   }
   return obj
 }
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict'
 
 exports.uniforms    = runtimeUniforms
@@ -6045,7 +6447,7 @@ function runtimeAttributes(gl, program) {
   return result
 }
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict'
 
 exports.shader   = getShaderReference
@@ -6183,7 +6585,7 @@ function createProgram(gl, vref, fref, attribs, locations) {
   return getCache(gl).getProgram(vref, fref, attribs, locations)
 }
 
-},{"./GLError":21,"gl-format-compiler-error":27,"weakmap-shim":45}],27:[function(require,module,exports){
+},{"./GLError":22,"gl-format-compiler-error":28,"weakmap-shim":46}],28:[function(require,module,exports){
 
 var sprintf = require('sprintf-js').sprintf;
 var glConstants = require('gl-constants/lookup');
@@ -6238,7 +6640,7 @@ function formatCompilerError(errLog, src, type) {
 }
 
 
-},{"add-line-numbers":28,"gl-constants/lookup":32,"glsl-shader-name":33,"sprintf-js":42}],28:[function(require,module,exports){
+},{"add-line-numbers":29,"gl-constants/lookup":33,"glsl-shader-name":34,"sprintf-js":43}],29:[function(require,module,exports){
 var padLeft = require('pad-left')
 
 module.exports = addLineNumbers
@@ -6256,7 +6658,7 @@ function addLineNumbers (string, start, delim) {
   }).join('\n')
 }
 
-},{"pad-left":29}],29:[function(require,module,exports){
+},{"pad-left":30}],30:[function(require,module,exports){
 /*!
  * pad-left <https://github.com/jonschlinkert/pad-left>
  *
@@ -6272,7 +6674,7 @@ module.exports = function padLeft(str, num, ch) {
   ch = typeof ch !== 'undefined' ? (ch + '') : ' ';
   return repeat(ch, num) + str;
 };
-},{"repeat-string":30}],30:[function(require,module,exports){
+},{"repeat-string":31}],31:[function(require,module,exports){
 /*!
  * repeat-string <https://github.com/jonschlinkert/repeat-string>
  *
@@ -6344,7 +6746,7 @@ function repeat(str, num) {
   return res;
 }
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 module.exports = {
   0: 'NONE',
   1: 'ONE',
@@ -6644,14 +7046,14 @@ module.exports = {
   37444: 'BROWSER_DEFAULT_WEBGL'
 }
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 var gl10 = require('./1.0/numbers')
 
 module.exports = function lookupConstant (number) {
   return gl10[number]
 }
 
-},{"./1.0/numbers":31}],33:[function(require,module,exports){
+},{"./1.0/numbers":32}],34:[function(require,module,exports){
 var tokenize = require('glsl-tokenizer')
 var atob     = require('atob-lite')
 
@@ -6676,12 +7078,12 @@ function getName(src) {
   }
 }
 
-},{"atob-lite":34,"glsl-tokenizer":41}],34:[function(require,module,exports){
+},{"atob-lite":35,"glsl-tokenizer":42}],35:[function(require,module,exports){
 module.exports = function _atob(str) {
   return atob(str)
 }
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 module.exports = tokenize
 
 var literals100 = require('./lib/literals')
@@ -7045,7 +7447,7 @@ function tokenize(opt) {
   }
 }
 
-},{"./lib/builtins":37,"./lib/builtins-300es":36,"./lib/literals":39,"./lib/literals-300es":38,"./lib/operators":40}],36:[function(require,module,exports){
+},{"./lib/builtins":38,"./lib/builtins-300es":37,"./lib/literals":40,"./lib/literals-300es":39,"./lib/operators":41}],37:[function(require,module,exports){
 // 300es builtins/reserved words that were previously valid in v100
 var v100 = require('./builtins')
 
@@ -7116,7 +7518,7 @@ module.exports = v100.concat([
   , 'textureProjGradOffset'
 ])
 
-},{"./builtins":37}],37:[function(require,module,exports){
+},{"./builtins":38}],38:[function(require,module,exports){
 module.exports = [
   // Keep this list sorted
   'abs'
@@ -7268,7 +7670,7 @@ module.exports = [
   , 'textureCubeGradEXT'
 ]
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 var v100 = require('./literals')
 
 module.exports = v100.slice().concat([
@@ -7358,7 +7760,7 @@ module.exports = v100.slice().concat([
   , 'usampler2DMSArray'
 ])
 
-},{"./literals":39}],39:[function(require,module,exports){
+},{"./literals":40}],40:[function(require,module,exports){
 module.exports = [
   // current
     'precision'
@@ -7453,7 +7855,7 @@ module.exports = [
   , 'using'
 ]
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 module.exports = [
     '<<='
   , '>>='
@@ -7502,7 +7904,7 @@ module.exports = [
   , '}'
 ]
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 var tokenize = require('./index')
 
 module.exports = tokenizeString
@@ -7517,7 +7919,7 @@ function tokenizeString(str, opt) {
   return tokens
 }
 
-},{"./index":35}],42:[function(require,module,exports){
+},{"./index":36}],43:[function(require,module,exports){
 (function(window) {
     var re = {
         not_string: /[^s]/,
@@ -7727,7 +8129,7 @@ function tokenizeString(str, opt) {
     }
 })(typeof window === "undefined" ? this : window);
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 var hiddenStore = require('./hidden-store.js');
 
 module.exports = createStore;
@@ -7748,7 +8150,7 @@ function createStore() {
     };
 }
 
-},{"./hidden-store.js":44}],44:[function(require,module,exports){
+},{"./hidden-store.js":45}],45:[function(require,module,exports){
 module.exports = hiddenStore;
 
 function hiddenStore(obj, key) {
@@ -7766,7 +8168,7 @@ function hiddenStore(obj, key) {
     return store;
 }
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 // Original - @Gozola.
 // https://gist.github.com/Gozala/1269991
 // This is a reimplemented version (with a few bug fixes).
@@ -7797,7 +8199,7 @@ function weakMap() {
     }
 }
 
-},{"./create-store.js":43}],46:[function(require,module,exports){
+},{"./create-store.js":44}],47:[function(require,module,exports){
 module.exports = function(strings) {
   if (typeof strings === 'string') strings = [strings]
   var exprs = [].slice.call(arguments,1)
@@ -7809,7 +8211,7 @@ module.exports = function(strings) {
   return parts.join('')
 }
 
-},{}],47:[function(require,module,exports){
+},{}],48:[function(require,module,exports){
 module.exports = function( THREE ) {
 	/**
 	 * @author qiao / https://github.com/qiao
@@ -8831,7 +9233,7 @@ module.exports = function( THREE ) {
 	return OrbitControls;
 };
 
-},{}],48:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
 	typeof define === 'function' && define.amd ? define(['exports'], factory) :
