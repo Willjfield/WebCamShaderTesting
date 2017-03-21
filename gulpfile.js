@@ -32,7 +32,7 @@ var path = {
   },
   src: {
     html: 'html/*.html', 
-    js: 'js/script.js',
+    js: ['js/script.js'],
     style: 'scss/*.scss',
     img: 'img/**/*.{jpg,jpeg,png,gif,svg}'
   },

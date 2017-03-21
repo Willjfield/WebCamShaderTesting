@@ -28,6 +28,7 @@
     "browser-sync": "^2.9.12",
     "browserify": "^13.0.0",
     "browserify-shim": "^3.8.12",
+    "dat.gui": "^0.6.1",
     "del": "^2.1.0",
     "eslint": "^1.10.1",
     "fantasy-map-noise": "0.0.2",

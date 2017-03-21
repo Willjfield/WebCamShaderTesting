@@ -1,5 +1,7 @@
 varying vec2 vUv;
 varying vec3 vNormal;
+
+uniform float u_slider;
 uniform float amp0;
 uniform float amp1;
 uniform float amp2;
@@ -86,7 +88,9 @@ void main()
     amps[31] = amp31;
 
 	vUv = uv;
-	vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+    float dst = pow(distance(position, vec3(0.,0.,-10.)),u_slider);
+	vec4 mvPosition = modelViewMatrix * vec4( vec3(position.x,position.y,position.z+dst), 1.0 );
 	//vNormal = normalMatrix * normal;
 	vNormal = normal;
 	
@@ -95,8 +99,10 @@ void main()
 	int section = int(floor(((vNormal.y+1.)*.5)*numberSections));
 
 	float multiplier = getData(section);
-	vec4 newPosition = projectionMatrix * mvPosition;
-	newPosition.y += multiplier*.02;
-	gl_Position = newPosition;
+	//vec4 newPosition = projectionMatrix * mvPosition;
+	//newPosition.y += multiplier*.02;
+    //newPosition.z += distance(originalPosition, vec4(0.));
+    //newPosition.z = 
+	gl_Position = originalPosition;//vec4( originalPosition, 1.0 );
 	//gl_Position = mvPosition;
 }

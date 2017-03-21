@@ -5,8 +5,6 @@ var THREE = require('three');
 var OrbitControls = require('three-orbit-controls')(THREE);
 var noise = require('fantasy-map-noise');
 
-
-
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 var controls, renderer;
@@ -67,10 +65,23 @@ function init(_video){
   texture.magFilter = THREE.LinearFilter;
   texture.format = THREE.RGBFormat;
 
+  var gui = new dat.GUI();
+  var params = {
+    mainVal: 1,
+    secondVal: 1,
+  }
+
+  var changingVal = gui.add( params, 'secondVal' ).min(0).max(5).step(0.01).name('second Val').listen();
+  changingVal.onChange(function(value) 
+  {   uniforms.u_slider.value = value  });
+  //gui.add(sliderVal, 
+  //gui.add(sliderVal, 'secondVal');
+
   uniforms = {
+        u_slider: { type: "f", value: 1.0 },
         webcam: { type: "t", value: texture},
         u_time: { type: "f", value: 1.0 },
-        u_resolution: { type: "v2", value: new THREE.Vector2() },
+        u_resolution: { type: "v2", value: new THREE.Vector2(window.innerWidth,window.innerHeight) },
         u_mouse: { type: "v2", value: new THREE.Vector2() },
         amplitude:{type: "f", value: 1.0},
         amp0: { type: "f", value: 1.0 },
@@ -109,12 +120,12 @@ function init(_video){
         amp30: { type: "f", value: 3.0 },
         amp31: { type: "f", value: 4.0 },
         noise_stage: { type: "f", value: 1.0 },
-
     };
 
+  
 
-  geometry = new THREE.IcosahedronBufferGeometry(1, 3);
-
+  //geometry = new THREE.IcosahedronBufferGeometry(1, 3);
+  geometry = new THREE.PlaneBufferGeometry( 16, 9, 32 );
   material = new THREE.ShaderMaterial( {
       uniforms: uniforms,
       vertexShader: glslify("./vert.glsl"),
@@ -123,27 +134,28 @@ function init(_video){
   } );
   geometry.computeFaceNormals();
   geometry.computeVertexNormals();
-  //material = new THREE.MeshBasicMaterial( {color:0xff0000} );
+  //material = new THREE.MeshBasicMaterial( {color:0x111111} );
   var spread = 5;
   var scaleMax = 5;
-  var number = 50;
+  var number = 1;
   parent = new THREE.Object3D();
   for(var m=0;m<number;m++){
     var posx=(Math.random()*2-1)*spread;
     var posy=(Math.random()*2-1)*spread;
     var posz=(Math.random()*2-1)*spread;
     var _scale = (Math.random()*2-1)*scaleMax;
-    createMesh(geometry, material, new THREE.Vector3( posx,posy, posz ),new THREE.Vector3( posx,posy, posz ),_scale,parent);
+    //createMesh(geometry, material, new THREE.Vector3( posx,posy, posz ),new THREE.Vector3( posx,posy, posz ),_scale,parent);
   }
-  
+      createMesh(geometry, material, new THREE.Vector3( 0,0, 0 ),new THREE.Vector3( 0,0, 0 ),1,parent);
+
   scene.add(parent);
 
   //console.log(parent.children)
 
-    var Analyser = require('gl-audio-analyser');
-    var audio    = document.getElementById('audio-src');
-    audio.play();
-    analyser = Analyser(renderer.context, audio);
+  var Analyser = require('gl-audio-analyser');
+  var audio    = document.getElementById('audio-src');
+  audio.play();
+  analyser = Analyser(renderer.context, audio);
 
   // light = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
   // scene.add( light );
@@ -155,7 +167,6 @@ function createMesh(_geometry, _material, _position, _rotation, _scale, _parent)
   _mesh.rotation.set(_rotation.x,_rotation.y,_rotation.z);
   _mesh.scale.set(_scale,_scale,_scale);
   _parent.add( _mesh );
- 
   //console.log(_mesh)
 }
 
@@ -208,17 +219,17 @@ function render() {
       uniforms['amp'+i].value = (freq[i*2]+freq[(i*2)+1])/2;
     }
     
-    for(var s = 0; s<parent.children.length;s++){
-      noise_value = noise.perlin2(s*.1, js_noise_stage);
-      parent.children[s].position.x = noise_value*10;
-      noise_value = noise.perlin2(s*.34, js_noise_stage);
-      parent.children[s].position.y = noise_value*10;
-      noise_value = noise.perlin2(s*.77, js_noise_stage);
-      parent.children[s].position.z = noise_value*10;
-    }
+    // for(var s = 0; s<parent.children.length;s++){
+    //   noise_value = noise.perlin2(s*.1, js_noise_stage);
+    //   parent.children[s].position.x = noise_value*10;
+    //   noise_value = noise.perlin2(s*.34, js_noise_stage);
+    //   parent.children[s].position.y = noise_value*10;
+    //   noise_value = noise.perlin2(s*.77, js_noise_stage);
+    //   parent.children[s].position.z = noise_value*10;
+    // }
 
-    parent.rotateX(noise.perlin2(.31, js_noise_stage)*.1)
-    parent.rotateY(noise.perlin2(.52, js_noise_stage)*.1)
+    // parent.rotateX(noise.perlin2(.31, js_noise_stage)*.1)
+    // parent.rotateY(noise.perlin2(.52, js_noise_stage)*.1)
     uniforms.u_time.value += 0.05;
     renderer.render( scene, camera );
     

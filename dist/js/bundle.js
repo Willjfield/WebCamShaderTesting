@@ -7,8 +7,6 @@ var THREE = require('three');
 var OrbitControls = require('three-orbit-controls')(THREE);
 var noise = require('fantasy-map-noise');
 
-
-
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 var controls, renderer;
@@ -69,10 +67,23 @@ function init(_video){
   texture.magFilter = THREE.LinearFilter;
   texture.format = THREE.RGBFormat;
 
+  var gui = new dat.GUI();
+  var params = {
+    mainVal: 1,
+    secondVal: 1,
+  }
+
+  var changingVal = gui.add( params, 'secondVal' ).min(0).max(5).step(0.01).name('second Val').listen();
+  changingVal.onChange(function(value) 
+  {   uniforms.u_slider.value = value  });
+  //gui.add(sliderVal, 
+  //gui.add(sliderVal, 'secondVal');
+
   uniforms = {
+        u_slider: { type: "f", value: 1.0 },
         webcam: { type: "t", value: texture},
         u_time: { type: "f", value: 1.0 },
-        u_resolution: { type: "v2", value: new THREE.Vector2() },
+        u_resolution: { type: "v2", value: new THREE.Vector2(window.innerWidth,window.innerHeight) },
         u_mouse: { type: "v2", value: new THREE.Vector2() },
         amplitude:{type: "f", value: 1.0},
         amp0: { type: "f", value: 1.0 },
@@ -111,41 +122,42 @@ function init(_video){
         amp30: { type: "f", value: 3.0 },
         amp31: { type: "f", value: 4.0 },
         noise_stage: { type: "f", value: 1.0 },
-
     };
 
+  
 
-  geometry = new THREE.IcosahedronBufferGeometry(1, 3);
-
+  //geometry = new THREE.IcosahedronBufferGeometry(1, 3);
+  geometry = new THREE.PlaneBufferGeometry( 16, 9, 32 );
   material = new THREE.ShaderMaterial( {
       uniforms: uniforms,
-      vertexShader: glslify(["#define GLSLIFY 1\nvarying vec2 vUv;\nvarying vec3 vNormal;\nuniform float amp0;\nuniform float amp1;\nuniform float amp2;\nuniform float amp3;\nuniform float amp4;\nuniform float amp5;\nuniform float amp6;\nuniform float amp7;\n\nuniform float amp8;\nuniform float amp9;\nuniform float amp10;\nuniform float amp11;\nuniform float amp12;\nuniform float amp13;\nuniform float amp14;\nuniform float amp15;\n\nuniform float amp16;\nuniform float amp17;\nuniform float amp18;\nuniform float amp19;\nuniform float amp20;\nuniform float amp21;\nuniform float amp22;\nuniform float amp23;\n\nuniform float amp24;\nuniform float amp25;\nuniform float amp26;\nuniform float amp27;\nuniform float amp28;\nuniform float amp29;\nuniform float amp30;\nuniform float amp31;\n\nfloat amps[32];\n\nfloat getData(int id) {\n    for (int i=0; i<32; i++) {\n        if (i == id) return amps[i];\n    }\n}\n\nvoid main()\n{\n\n\tfloat numberSections = 32.;\n    \n    amps[0] = amp0;\n    amps[1] = amp1;\n    amps[2] = amp2;\n    amps[3] = amp3;\n    amps[4] = amp4;\n    amps[5] = amp5;\n    amps[6] = amp6;\n    amps[7] = amp7;\n\n    amps[8] = amp8;\n    amps[9] = amp9;\n    amps[10] = amp10;\n    amps[11] = amp11;\n    amps[12] = amp12;\n    amps[13] = amp13;\n    amps[14] = amp14;\n    amps[15] = amp15;\n\n    amps[16] = amp16;\n    amps[17] = amp17;\n    amps[18] = amp18;\n    amps[19] = amp19;\n    amps[20] = amp20;\n    amps[21] = amp21;\n    amps[22] = amp22;\n    amps[23] = amp23;\n\n    amps[24] = amp24;\n    amps[25] = amp25;\n    amps[26] = amp26;\n    amps[27] = amp27;\n    amps[28] = amp28;\n    amps[29] = amp29;\n    amps[30] = amp30;\n    amps[31] = amp31;\n\n\tvUv = uv;\n\tvec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );\n\t//vNormal = normalMatrix * normal;\n\tvNormal = normal;\n\t\n\t\n\tvec4 originalPosition = projectionMatrix * mvPosition;\n\tint section = int(floor(((vNormal.y+1.)*.5)*numberSections));\n\n\tfloat multiplier = getData(section);\n\tvec4 newPosition = projectionMatrix * mvPosition;\n\tnewPosition.y += multiplier*.02;\n\tgl_Position = newPosition;\n\t//gl_Position = mvPosition;\n}"]),
-      fragmentShader: glslify(["#define GLSLIFY 1\n//#extension GL_OES_standard_derivatives : enable\n\nvarying vec3 vNormal;\nvarying vec2 vUv;\nuniform vec2 u_resolution;\n\n//#pragma glslify: snoise3 = require(glsl-noise/simplex/3d);\n//\n// Description : Array and textureless GLSL 2D/3D/4D simplex\n//               noise functions.\n//      Author : Ian McEwan, Ashima Arts.\n//  Maintainer : ijm\n//     Lastmod : 20110822 (ijm)\n//     License : Copyright (C) 2011 Ashima Arts. All rights reserved.\n//               Distributed under the MIT License. See LICENSE file.\n//               https://github.com/ashima/webgl-noise\n//\n\nvec4 mod289(vec4 x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0; }\n\nfloat mod289(float x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0; }\n\nvec4 permute(vec4 x) {\n     return mod289(((x*34.0)+1.0)*x);\n}\n\nfloat permute(float x) {\n     return mod289(((x*34.0)+1.0)*x);\n}\n\nvec4 taylorInvSqrt(vec4 r)\n{\n  return 1.79284291400159 - 0.85373472095314 * r;\n}\n\nfloat taylorInvSqrt(float r)\n{\n  return 1.79284291400159 - 0.85373472095314 * r;\n}\n\nvec4 grad4(float j, vec4 ip)\n  {\n  const vec4 ones = vec4(1.0, 1.0, 1.0, -1.0);\n  vec4 p,s;\n\n  p.xyz = floor( fract (vec3(j) * ip.xyz) * 7.0) * ip.z - 1.0;\n  p.w = 1.5 - dot(abs(p.xyz), ones.xyz);\n  s = vec4(lessThan(p, vec4(0.0)));\n  p.xyz = p.xyz + (s.xyz*2.0 - 1.0) * s.www;\n\n  return p;\n  }\n\n// (sqrt(5) - 1)/4 = F4, used once below\n#define F4 0.309016994374947451\n\nfloat snoise(vec4 v)\n  {\n  const vec4  C = vec4( 0.138196601125011,  // (5 - sqrt(5))/20  G4\n                        0.276393202250021,  // 2 * G4\n                        0.414589803375032,  // 3 * G4\n                       -0.447213595499958); // -1 + 4 * G4\n\n// First corner\n  vec4 i  = floor(v + dot(v, vec4(F4)) );\n  vec4 x0 = v -   i + dot(i, C.xxxx);\n\n// Other corners\n\n// Rank sorting originally contributed by Bill Licea-Kane, AMD (formerly ATI)\n  vec4 i0;\n  vec3 isX = step( x0.yzw, x0.xxx );\n  vec3 isYZ = step( x0.zww, x0.yyz );\n//  i0.x = dot( isX, vec3( 1.0 ) );\n  i0.x = isX.x + isX.y + isX.z;\n  i0.yzw = 1.0 - isX;\n//  i0.y += dot( isYZ.xy, vec2( 1.0 ) );\n  i0.y += isYZ.x + isYZ.y;\n  i0.zw += 1.0 - isYZ.xy;\n  i0.z += isYZ.z;\n  i0.w += 1.0 - isYZ.z;\n\n  // i0 now contains the unique values 0,1,2,3 in each channel\n  vec4 i3 = clamp( i0, 0.0, 1.0 );\n  vec4 i2 = clamp( i0-1.0, 0.0, 1.0 );\n  vec4 i1 = clamp( i0-2.0, 0.0, 1.0 );\n\n  //  x0 = x0 - 0.0 + 0.0 * C.xxxx\n  //  x1 = x0 - i1  + 1.0 * C.xxxx\n  //  x2 = x0 - i2  + 2.0 * C.xxxx\n  //  x3 = x0 - i3  + 3.0 * C.xxxx\n  //  x4 = x0 - 1.0 + 4.0 * C.xxxx\n  vec4 x1 = x0 - i1 + C.xxxx;\n  vec4 x2 = x0 - i2 + C.yyyy;\n  vec4 x3 = x0 - i3 + C.zzzz;\n  vec4 x4 = x0 + C.wwww;\n\n// Permutations\n  i = mod289(i);\n  float j0 = permute( permute( permute( permute(i.w) + i.z) + i.y) + i.x);\n  vec4 j1 = permute( permute( permute( permute (\n             i.w + vec4(i1.w, i2.w, i3.w, 1.0 ))\n           + i.z + vec4(i1.z, i2.z, i3.z, 1.0 ))\n           + i.y + vec4(i1.y, i2.y, i3.y, 1.0 ))\n           + i.x + vec4(i1.x, i2.x, i3.x, 1.0 ));\n\n// Gradients: 7x7x6 points over a cube, mapped onto a 4-cross polytope\n// 7*7*6 = 294, which is close to the ring size 17*17 = 289.\n  vec4 ip = vec4(1.0/294.0, 1.0/49.0, 1.0/7.0, 0.0) ;\n\n  vec4 p0 = grad4(j0,   ip);\n  vec4 p1 = grad4(j1.x, ip);\n  vec4 p2 = grad4(j1.y, ip);\n  vec4 p3 = grad4(j1.z, ip);\n  vec4 p4 = grad4(j1.w, ip);\n\n// Normalise gradients\n  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));\n  p0 *= norm.x;\n  p1 *= norm.y;\n  p2 *= norm.z;\n  p3 *= norm.w;\n  p4 *= taylorInvSqrt(dot(p4,p4));\n\n// Mix contributions from the five corners\n  vec3 m0 = max(0.6 - vec3(dot(x0,x0), dot(x1,x1), dot(x2,x2)), 0.0);\n  vec2 m1 = max(0.6 - vec2(dot(x3,x3), dot(x4,x4)            ), 0.0);\n  m0 = m0 * m0;\n  m1 = m1 * m1;\n  return 49.0 * ( dot(m0*m0, vec3( dot( p0, x0 ), dot( p1, x1 ), dot( p2, x2 )))\n               + dot(m1*m1, vec2( dot( p3, x3 ), dot( p4, x4 ) ) ) ) ;\n\n  }\n\nuniform float u_time;\n\nuniform sampler2D webcam;\n\nuniform float amplitude;\nuniform float noise_stage;\n\nvoid main() {\n    vec2 st = gl_FragCoord.xy/u_resolution.xy;\n    //\n    //float numberSections = 8.;\n   \n    //float appliedAmp = log(getData(section)/128.)*pow(amplitude,4.);\n\n    float noiseR = snoise(vec4(vNormal.x,vNormal.y,vNormal.z,(u_time*.01)+noise_stage*.025));\n    float noiseG = snoise(vec4(vNormal.x,vNormal.y,vNormal.z,100.+(u_time*.01)+noise_stage*.025));\n    float noiseB = snoise(vec4(vNormal.x,vNormal.y,vNormal.z,1000.+(u_time*.01)+noise_stage*.025));\n    //float noise = snoise(vec3(vNormal));\n    float originalNoise = noiseR;\n    vec3 noises=vec3(noiseR,noiseG,noiseB);\n    noises = (noises+2.)/2.;\n    //noises = pow(noises,2.);\n    //noises=mod(noises*5.,2.);\n    vec3 random;\n    //if(noiseR>.5)\n    vec3 camColor = texture2D( webcam, vec2(vUv.x,vUv.y) ).rgb;\n    vec3 noiseMix = noises;\n    vec3 lightSource = vec3(sin(u_time*.025),.1,cos(u_time*.025));\n    vec3 color = noiseMix*(dot(vNormal,lightSource));\n    gl_FragColor= vec4(camColor*noises,1.0);//vec4(vec3(color+.5),1.0);\n}"]),
+      vertexShader: glslify(["#define GLSLIFY 1\nvarying vec2 vUv;\nvarying vec3 vNormal;\n\nuniform float u_slider;\nuniform float amp0;\nuniform float amp1;\nuniform float amp2;\nuniform float amp3;\nuniform float amp4;\nuniform float amp5;\nuniform float amp6;\nuniform float amp7;\n\nuniform float amp8;\nuniform float amp9;\nuniform float amp10;\nuniform float amp11;\nuniform float amp12;\nuniform float amp13;\nuniform float amp14;\nuniform float amp15;\n\nuniform float amp16;\nuniform float amp17;\nuniform float amp18;\nuniform float amp19;\nuniform float amp20;\nuniform float amp21;\nuniform float amp22;\nuniform float amp23;\n\nuniform float amp24;\nuniform float amp25;\nuniform float amp26;\nuniform float amp27;\nuniform float amp28;\nuniform float amp29;\nuniform float amp30;\nuniform float amp31;\n\nfloat amps[32];\n\nfloat getData(int id) {\n    for (int i=0; i<32; i++) {\n        if (i == id) return amps[i];\n    }\n}\n\nvoid main()\n{\n\n\tfloat numberSections = 32.;\n    \n    amps[0] = amp0;\n    amps[1] = amp1;\n    amps[2] = amp2;\n    amps[3] = amp3;\n    amps[4] = amp4;\n    amps[5] = amp5;\n    amps[6] = amp6;\n    amps[7] = amp7;\n\n    amps[8] = amp8;\n    amps[9] = amp9;\n    amps[10] = amp10;\n    amps[11] = amp11;\n    amps[12] = amp12;\n    amps[13] = amp13;\n    amps[14] = amp14;\n    amps[15] = amp15;\n\n    amps[16] = amp16;\n    amps[17] = amp17;\n    amps[18] = amp18;\n    amps[19] = amp19;\n    amps[20] = amp20;\n    amps[21] = amp21;\n    amps[22] = amp22;\n    amps[23] = amp23;\n\n    amps[24] = amp24;\n    amps[25] = amp25;\n    amps[26] = amp26;\n    amps[27] = amp27;\n    amps[28] = amp28;\n    amps[29] = amp29;\n    amps[30] = amp30;\n    amps[31] = amp31;\n\n\tvUv = uv;\n\n    float dst = pow(distance(position, vec3(0.,0.,-10.)),u_slider);\n\tvec4 mvPosition = modelViewMatrix * vec4( vec3(position.x,position.y,position.z+dst), 1.0 );\n\t//vNormal = normalMatrix * normal;\n\tvNormal = normal;\n\t\n\t\n\tvec4 originalPosition = projectionMatrix * mvPosition;\n\tint section = int(floor(((vNormal.y+1.)*.5)*numberSections));\n\n\tfloat multiplier = getData(section);\n\t//vec4 newPosition = projectionMatrix * mvPosition;\n\t//newPosition.y += multiplier*.02;\n    //newPosition.z += distance(originalPosition, vec4(0.));\n    //newPosition.z = \n\tgl_Position = originalPosition;//vec4( originalPosition, 1.0 );\n\t//gl_Position = mvPosition;\n}"]),
+      fragmentShader: glslify(["#extension GL_OES_standard_derivatives : enable\n#define GLSLIFY 1\n\nvarying vec3 vNormal;\nvarying vec2 vUv;\nuniform vec2 u_resolution;\n\n//\n// Description : Array and textureless GLSL 2D/3D/4D simplex\n//               noise functions.\n//      Author : Ian McEwan, Ashima Arts.\n//  Maintainer : ijm\n//     Lastmod : 20110822 (ijm)\n//     License : Copyright (C) 2011 Ashima Arts. All rights reserved.\n//               Distributed under the MIT License. See LICENSE file.\n//               https://github.com/ashima/webgl-noise\n//\n\nvec3 mod289_0(vec3 x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0;\n}\n\nvec4 mod289_0(vec4 x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0;\n}\n\nvec4 permute_0(vec4 x) {\n     return mod289_0(((x*34.0)+1.0)*x);\n}\n\nvec4 taylorInvSqrt_0(vec4 r)\n{\n  return 1.79284291400159 - 0.85373472095314 * r;\n}\n\nfloat snoise_0(vec3 v)\n  {\n  const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;\n  const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);\n\n// First corner\n  vec3 i  = floor(v + dot(v, C.yyy) );\n  vec3 x0 =   v - i + dot(i, C.xxx) ;\n\n// Other corners\n  vec3 g = step(x0.yzx, x0.xyz);\n  vec3 l = 1.0 - g;\n  vec3 i1 = min( g.xyz, l.zxy );\n  vec3 i2 = max( g.xyz, l.zxy );\n\n  //   x0 = x0 - 0.0 + 0.0 * C.xxx;\n  //   x1 = x0 - i1  + 1.0 * C.xxx;\n  //   x2 = x0 - i2  + 2.0 * C.xxx;\n  //   x3 = x0 - 1.0 + 3.0 * C.xxx;\n  vec3 x1 = x0 - i1 + C.xxx;\n  vec3 x2 = x0 - i2 + C.yyy; // 2.0*C.x = 1/3 = C.y\n  vec3 x3 = x0 - D.yyy;      // -1.0+3.0*C.x = -0.5 = -D.y\n\n// Permutations\n  i = mod289_0(i);\n  vec4 p = permute_0( permute_0( permute_0(\n             i.z + vec4(0.0, i1.z, i2.z, 1.0 ))\n           + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))\n           + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));\n\n// Gradients: 7x7 points over a square, mapped onto an octahedron.\n// The ring size 17*17 = 289 is close to a multiple of 49 (49*6 = 294)\n  float n_ = 0.142857142857; // 1.0/7.0\n  vec3  ns = n_ * D.wyz - D.xzx;\n\n  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);  //  mod(p,7*7)\n\n  vec4 x_ = floor(j * ns.z);\n  vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)\n\n  vec4 x = x_ *ns.x + ns.yyyy;\n  vec4 y = y_ *ns.x + ns.yyyy;\n  vec4 h = 1.0 - abs(x) - abs(y);\n\n  vec4 b0 = vec4( x.xy, y.xy );\n  vec4 b1 = vec4( x.zw, y.zw );\n\n  //vec4 s0 = vec4(lessThan(b0,0.0))*2.0 - 1.0;\n  //vec4 s1 = vec4(lessThan(b1,0.0))*2.0 - 1.0;\n  vec4 s0 = floor(b0)*2.0 + 1.0;\n  vec4 s1 = floor(b1)*2.0 + 1.0;\n  vec4 sh = -step(h, vec4(0.0));\n\n  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;\n  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;\n\n  vec3 p0_0 = vec3(a0.xy,h.x);\n  vec3 p1 = vec3(a0.zw,h.y);\n  vec3 p2 = vec3(a1.xy,h.z);\n  vec3 p3 = vec3(a1.zw,h.w);\n\n//Normalise gradients\n  vec4 norm = taylorInvSqrt_0(vec4(dot(p0_0,p0_0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));\n  p0_0 *= norm.x;\n  p1 *= norm.y;\n  p2 *= norm.z;\n  p3 *= norm.w;\n\n// Mix final noise value\n  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);\n  m = m * m;\n  return 42.0 * dot( m*m, vec4( dot(p0_0,x0), dot(p1,x1),\n                                dot(p2,x2), dot(p3,x3) ) );\n  }\n\n//\n// Description : Array and textureless GLSL 2D/3D/4D simplex\n//               noise functions.\n//      Author : Ian McEwan, Ashima Arts.\n//  Maintainer : ijm\n//     Lastmod : 20110822 (ijm)\n//     License : Copyright (C) 2011 Ashima Arts. All rights reserved.\n//               Distributed under the MIT License. See LICENSE file.\n//               https://github.com/ashima/webgl-noise\n//\n\nvec4 mod289_1(vec4 x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0; }\n\nfloat mod289_1(float x) {\n  return x - floor(x * (1.0 / 289.0)) * 289.0; }\n\nvec4 permute_1(vec4 x) {\n     return mod289_1(((x*34.0)+1.0)*x);\n}\n\nfloat permute_1(float x) {\n     return mod289_1(((x*34.0)+1.0)*x);\n}\n\nvec4 taylorInvSqrt_1(vec4 r)\n{\n  return 1.79284291400159 - 0.85373472095314 * r;\n}\n\nfloat taylorInvSqrt_1(float r)\n{\n  return 1.79284291400159 - 0.85373472095314 * r;\n}\n\nvec4 grad4(float j, vec4 ip)\n  {\n  const vec4 ones = vec4(1.0, 1.0, 1.0, -1.0);\n  vec4 p,s;\n\n  p.xyz = floor( fract (vec3(j) * ip.xyz) * 7.0) * ip.z - 1.0;\n  p.w = 1.5 - dot(abs(p.xyz), ones.xyz);\n  s = vec4(lessThan(p, vec4(0.0)));\n  p.xyz = p.xyz + (s.xyz*2.0 - 1.0) * s.www;\n\n  return p;\n  }\n\n// (sqrt(5) - 1)/4 = F4, used once below\n#define F4 0.309016994374947451\n\nfloat snoise_1(vec4 v)\n  {\n  const vec4  C = vec4( 0.138196601125011,  // (5 - sqrt(5))/20  G4\n                        0.276393202250021,  // 2 * G4\n                        0.414589803375032,  // 3 * G4\n                       -0.447213595499958); // -1 + 4 * G4\n\n// First corner\n  vec4 i  = floor(v + dot(v, vec4(F4)) );\n  vec4 x0 = v -   i + dot(i, C.xxxx);\n\n// Other corners\n\n// Rank sorting originally contributed by Bill Licea-Kane, AMD (formerly ATI)\n  vec4 i0;\n  vec3 isX = step( x0.yzw, x0.xxx );\n  vec3 isYZ = step( x0.zww, x0.yyz );\n//  i0.x = dot( isX, vec3( 1.0 ) );\n  i0.x = isX.x + isX.y + isX.z;\n  i0.yzw = 1.0 - isX;\n//  i0.y += dot( isYZ.xy, vec2( 1.0 ) );\n  i0.y += isYZ.x + isYZ.y;\n  i0.zw += 1.0 - isYZ.xy;\n  i0.z += isYZ.z;\n  i0.w += 1.0 - isYZ.z;\n\n  // i0 now contains the unique values 0,1,2,3 in each channel\n  vec4 i3 = clamp( i0, 0.0, 1.0 );\n  vec4 i2 = clamp( i0-1.0, 0.0, 1.0 );\n  vec4 i1 = clamp( i0-2.0, 0.0, 1.0 );\n\n  //  x0 = x0 - 0.0 + 0.0 * C.xxxx\n  //  x1 = x0 - i1  + 1.0 * C.xxxx\n  //  x2 = x0 - i2  + 2.0 * C.xxxx\n  //  x3 = x0 - i3  + 3.0 * C.xxxx\n  //  x4 = x0 - 1.0 + 4.0 * C.xxxx\n  vec4 x1 = x0 - i1 + C.xxxx;\n  vec4 x2 = x0 - i2 + C.yyyy;\n  vec4 x3 = x0 - i3 + C.zzzz;\n  vec4 x4 = x0 + C.wwww;\n\n// Permutations\n  i = mod289_1(i);\n  float j0 = permute_1( permute_1( permute_1( permute_1(i.w) + i.z) + i.y) + i.x);\n  vec4 j1 = permute_1( permute_1( permute_1( permute_1 (\n             i.w + vec4(i1.w, i2.w, i3.w, 1.0 ))\n           + i.z + vec4(i1.z, i2.z, i3.z, 1.0 ))\n           + i.y + vec4(i1.y, i2.y, i3.y, 1.0 ))\n           + i.x + vec4(i1.x, i2.x, i3.x, 1.0 ));\n\n// Gradients: 7x7x6 points over a cube, mapped onto a 4-cross polytope\n// 7*7*6 = 294, which is close to the ring size 17*17 = 289.\n  vec4 ip = vec4(1.0/294.0, 1.0/49.0, 1.0/7.0, 0.0) ;\n\n  vec4 p0_1 = grad4(j0,   ip);\n  vec4 p1 = grad4(j1.x, ip);\n  vec4 p2 = grad4(j1.y, ip);\n  vec4 p3 = grad4(j1.z, ip);\n  vec4 p4 = grad4(j1.w, ip);\n\n// Normalise gradients\n  vec4 norm = taylorInvSqrt_1(vec4(dot(p0_1,p0_1), dot(p1,p1), dot(p2, p2), dot(p3,p3)));\n  p0_1 *= norm.x;\n  p1 *= norm.y;\n  p2 *= norm.z;\n  p3 *= norm.w;\n  p4 *= taylorInvSqrt_1(dot(p4,p4));\n\n// Mix contributions from the five corners\n  vec3 m0 = max(0.6 - vec3(dot(x0,x0), dot(x1,x1), dot(x2,x2)), 0.0);\n  vec2 m1 = max(0.6 - vec2(dot(x3,x3), dot(x4,x4)            ), 0.0);\n  m0 = m0 * m0;\n  m1 = m1 * m1;\n  return 49.0 * ( dot(m0*m0, vec3( dot( p0_1, x0 ), dot( p1, x1 ), dot( p2, x2 )))\n               + dot(m1*m1, vec2( dot( p3, x3 ), dot( p4, x4 ) ) ) ) ;\n\n  }\n\nuniform float u_time;\n\nuniform sampler2D webcam;\n\nuniform float amplitude;\nuniform float noise_stage;\n\nmat2 rotate2d(float _angle){\n    return mat2(cos(_angle),-sin(_angle),\n                sin(_angle),cos(_angle));\n}\n\nvec2 random2( vec2 p ) {\n    return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453);\n}\n\nvoid main() {\n    vec2 st = vUv;//gl_FragCoord.xy/u_resolution.xy;\n    st *= 5.;\n    // Tile the space\n    vec2 i_st = floor(st);\n    vec2 f_st = fract(st);\n\n    // vec2 point[10];\n    // point[0] = vec2(0.83,0.75);\n    // point[1] = vec2(0.60,0.07);\n    // point[2] = vec2(0.28,0.64);\n    // point[3] =  vec2(0.31,0.26);\n    // point[4] = vec2(0.64,0.2);\n    // point[5] = vec2(0.53,0.355);\n    // point[6] = vec2(0.30,0.035);\n    // point[7] = vec2(0.18,0.34);\n    // point[8] =  vec2(0.151,0.16);\n    // point[9] = vec2(0.4,0.1);\n\n    vec2 m_point;\n    \n    float m_dist = 2.;  // minimum distance\n    for (int y= -1; y <= 1; y++) {\n        for (int x= -1; x <= 1; x++) {\n            // Neighbor place in the grid\n            vec2 neighbor = vec2(float(x),float(y));\n            \n            // Random position from current + neighbor place in the grid\n            m_point = random2(i_st + neighbor);\n\n            // Animate the point\n            m_point = 0.5 + 0.5*sin(u_time*.5 + 6.2831*m_point);\n            \n            // Vector between the pixel and the point\n            vec2 diff = neighbor + m_point - f_st;\n            \n            // Distance to the point\n            float dist = length(diff);\n\n            // Keep the closer distance\n            m_dist = min(m_dist, dist);\n        }\n    }\n\n    // for (int i = 0; i < 10; i++) {\n    //     float dist = distance(vUv, point[i]);\n    //     if ( dist < m_dist ) {\n    //         // Keep the closer distance\n    //         m_dist = dist;\n\n    //         // Kepp the position of the closer point\n    //         m_point = point[i];\n    //     }\n    // }\n\n    //vec2 color.rg = m_point;\n    // float noiseR = snoise4(vec4(vNormal.x,vNormal.y,vNormal.z,(u_time*.01)+noise_stage*.025));\n    // float noiseG = snoise4(vec4(vNormal.x,vNormal.y,vNormal.z,100.+(u_time*.01)+noise_stage*.025));\n    // float noiseB = snoise4(vec4(vNormal.x,vNormal.y,vNormal.z,1000.+(u_time*.01)+noise_stage*.025));\n\n    //float vernoiTwist = snoise3(vUv.x,u_time,vUv.y);\n    vec2 sampleCoords = vUv;\n    sampleCoords -= vec2(m_dist);\n    // rotate the space\n    sampleCoords = rotate2d( u_time*.1*3.14159265358979323 ) * sampleCoords;\n    // move it back to the original place\n    sampleCoords += vec2(m_dist);\n    \n\n    //float noise = snoise(vec3(vNormal));\n    //float originalNoise = noiseR;\n    //vec3 noises=vec3(noiseR,noiseG,noiseB);\n    //noises = (noises+2.)/2.;\n    //noises = pow(noises,2.);\n    //noises=mod(noises*5.,2.);\n    vec3 random;\n    //if(noiseR>.5)\n    vec3 camColor = texture2D( webcam, vec2(sampleCoords.x,sampleCoords.y) ).rgb;\n    vec3 noiseMix = vec3(m_dist,m_dist,1.);\n    vec3 lightSource = vec3(sin(u_time*.1),.1,cos(u_time*.1));\n    vec3 color = noiseMix*(dot(vNormal,lightSource));\n\n    gl_FragColor= vec4(mix(camColor,color,.2),1.);\n    //gl_FragColor= vec4(vec3(.1),1.);\n}"]),
       side: THREE.DoubleSide  
   } );
   geometry.computeFaceNormals();
   geometry.computeVertexNormals();
-  //material = new THREE.MeshBasicMaterial( {color:0xff0000} );
+  //material = new THREE.MeshBasicMaterial( {color:0x111111} );
   var spread = 5;
   var scaleMax = 5;
-  var number = 50;
+  var number = 1;
   parent = new THREE.Object3D();
   for(var m=0;m<number;m++){
     var posx=(Math.random()*2-1)*spread;
     var posy=(Math.random()*2-1)*spread;
     var posz=(Math.random()*2-1)*spread;
     var _scale = (Math.random()*2-1)*scaleMax;
-    createMesh(geometry, material, new THREE.Vector3( posx,posy, posz ),new THREE.Vector3( posx,posy, posz ),_scale,parent);
+    //createMesh(geometry, material, new THREE.Vector3( posx,posy, posz ),new THREE.Vector3( posx,posy, posz ),_scale,parent);
   }
-  
+      createMesh(geometry, material, new THREE.Vector3( 0,0, 0 ),new THREE.Vector3( 0,0, 0 ),1,parent);
+
   scene.add(parent);
 
   //console.log(parent.children)
 
-    var Analyser = require('gl-audio-analyser');
-    var audio    = document.getElementById('audio-src');
-    audio.play();
-    analyser = Analyser(renderer.context, audio);
+  var Analyser = require('gl-audio-analyser');
+  var audio    = document.getElementById('audio-src');
+  audio.play();
+  analyser = Analyser(renderer.context, audio);
 
   // light = new THREE.HemisphereLight( 0xffffbb, 0x080820, 1 );
   // scene.add( light );
@@ -157,7 +169,6 @@ function createMesh(_geometry, _material, _position, _rotation, _scale, _parent)
   _mesh.rotation.set(_rotation.x,_rotation.y,_rotation.z);
   _mesh.scale.set(_scale,_scale,_scale);
   _parent.add( _mesh );
- 
   //console.log(_mesh)
 }
 
@@ -210,17 +221,17 @@ function render() {
       uniforms['amp'+i].value = (freq[i*2]+freq[(i*2)+1])/2;
     }
     
-    for(var s = 0; s<parent.children.length;s++){
-      noise_value = noise.perlin2(s*.1, js_noise_stage);
-      parent.children[s].position.x = noise_value*10;
-      noise_value = noise.perlin2(s*.34, js_noise_stage);
-      parent.children[s].position.y = noise_value*10;
-      noise_value = noise.perlin2(s*.77, js_noise_stage);
-      parent.children[s].position.z = noise_value*10;
-    }
+    // for(var s = 0; s<parent.children.length;s++){
+    //   noise_value = noise.perlin2(s*.1, js_noise_stage);
+    //   parent.children[s].position.x = noise_value*10;
+    //   noise_value = noise.perlin2(s*.34, js_noise_stage);
+    //   parent.children[s].position.y = noise_value*10;
+    //   noise_value = noise.perlin2(s*.77, js_noise_stage);
+    //   parent.children[s].position.z = noise_value*10;
+    // }
 
-    parent.rotateX(noise.perlin2(.31, js_noise_stage)*.1)
-    parent.rotateY(noise.perlin2(.52, js_noise_stage)*.1)
+    // parent.rotateX(noise.perlin2(.31, js_noise_stage)*.1)
+    // parent.rotateY(noise.perlin2(.52, js_noise_stage)*.1)
     uniforms.u_time.value += 0.05;
     renderer.render( scene, camera );
     
