@@ -67,65 +67,44 @@ function init(_video){
 
   var gui = new dat.GUI();
   var params = {
-    mainVal: 1,
-    secondVal: 1,
+    _value: 1,
   }
 
-  var changingVal = gui.add( params, 'secondVal' ).min(0).max(5).step(0.01).name('second Val').listen();
+  var changingVal = gui.add( params, '_value' ).min(0).max(5).step(0.01).name('_value').listen();
   changingVal.onChange(function(value) 
   {   uniforms.u_slider.value = value  });
-  //gui.add(sliderVal, 
-  //gui.add(sliderVal, 'secondVal');
+
+//   var myImage = new THREE.TextureLoader();
+  
+//   myImage.addEventListener('load', function(event){
+//     uniforms.colorMap.value = event.content;
+//   });
+
+// myImage.load('img/IMG_20170321_100439.jpg');
+
+// var texloader = new THREE.TextureLoader();
+// texloader.load("img/IMG_20170321_100439.jpg", function(tex) {
+
+//   //var mat = new THREE.MeshBasicMaterial({ map: tex });
+//   uniforms.colorMap.value = tex;
+// });
+
 
   uniforms = {
+        colorMap: { type: "t", value: new THREE.TextureLoader().load( "./img/PANO_20140530_203049_sm.jpg" ) },
         u_slider: { type: "f", value: 1.0 },
         webcam: { type: "t", value: texture},
         u_time: { type: "f", value: 1.0 },
         u_resolution: { type: "v2", value: new THREE.Vector2(window.innerWidth,window.innerHeight) },
         u_mouse: { type: "v2", value: new THREE.Vector2() },
-        amplitude:{type: "f", value: 1.0},
-        amp0: { type: "f", value: 1.0 },
-        amp1: { type: "f", value: 2.0 },
-        amp2: { type: "f", value: 3.0 },
-        amp3: { type: "f", value: 4.0 },
-        amp4: { type: "f", value: 1.0 },
-        amp5: { type: "f", value: 2.0 },
-        amp6: { type: "f", value: 3.0 },
-        amp7: { type: "f", value: 4.0 },
-
-        amp8: { type: "f", value: 1.0 },
-        amp9: { type: "f", value: 2.0 },
-        amp10: { type: "f", value: 3.0 },
-        amp11: { type: "f", value: 4.0 },
-        amp12: { type: "f", value: 1.0 },
-        amp13: { type: "f", value: 2.0 },
-        amp14: { type: "f", value: 3.0 },
-        amp15: { type: "f", value: 4.0 },
-
-        amp16: { type: "f", value: 1.0 },
-        amp17: { type: "f", value: 2.0 },
-        amp18: { type: "f", value: 3.0 },
-        amp19: { type: "f", value: 4.0 },
-        amp20: { type: "f", value: 1.0 },
-        amp21: { type: "f", value: 2.0 },
-        amp22: { type: "f", value: 3.0 },
-        amp23: { type: "f", value: 4.0 },
-
-        amp24: { type: "f", value: 1.0 },
-        amp25: { type: "f", value: 2.0 },
-        amp26: { type: "f", value: 3.0 },
-        amp27: { type: "f", value: 4.0 },
-        amp28: { type: "f", value: 1.0 },
-        amp29: { type: "f", value: 2.0 },
-        amp30: { type: "f", value: 3.0 },
-        amp31: { type: "f", value: 4.0 },
+        /*amplitude:{type: "f", value: 1.0},*/
         noise_stage: { type: "f", value: 1.0 },
     };
 
   
 
-  //geometry = new THREE.IcosahedronBufferGeometry(1, 3);
-  geometry = new THREE.PlaneBufferGeometry( 16, 9, 32 );
+  geometry = new THREE.IcosahedronBufferGeometry(1, 1);
+  //geometry = new THREE.PlaneBufferGeometry( 16, 9, 32 );
   material = new THREE.ShaderMaterial( {
       uniforms: uniforms,
       vertexShader: glslify("./vert.glsl"),
@@ -146,8 +125,8 @@ function init(_video){
     var _scale = (Math.random()*2-1)*scaleMax;
     //createMesh(geometry, material, new THREE.Vector3( posx,posy, posz ),new THREE.Vector3( posx,posy, posz ),_scale,parent);
   }
-      createMesh(geometry, material, new THREE.Vector3( 0,0, 0 ),new THREE.Vector3( 0,0, 0 ),1,parent);
-
+  createMesh(geometry, material, new THREE.Vector3( 0,0, 0 ),new THREE.Vector3( 0,0, 0 ),1,parent);
+  parent.rotateZ(Math.PI)
   scene.add(parent);
 
   //console.log(parent.children)
@@ -210,14 +189,14 @@ function render() {
     freq = analyser.frequencies();
 
     var amplitude = largest(waveform)/128;
-    uniforms.amplitude.value = amplitude;
+    //uniforms.amplitude.value = amplitude;
     //console.log(amplitude)
     noise_stage += amplitude-1;
-    uniforms.noise_stage.value = noise_stage;
+    //uniforms.noise_stage.value = noise_stage;
 
-    for(var i=0;i<32;i++){
-      uniforms['amp'+i].value = (freq[i*2]+freq[(i*2)+1])/2;
-    }
+    // for(var i=0;i<32;i++){
+    //   uniforms['amp'+i].value = (freq[i*2]+freq[(i*2)+1])/2;
+    // }
     
     // for(var s = 0; s<parent.children.length;s++){
     //   noise_value = noise.perlin2(s*.1, js_noise_stage);
@@ -228,8 +207,9 @@ function render() {
     //   parent.children[s].position.z = noise_value*10;
     // }
 
-    // parent.rotateX(noise.perlin2(.31, js_noise_stage)*.1)
-    // parent.rotateY(noise.perlin2(.52, js_noise_stage)*.1)
+    parent.rotateX(.001)
+    parent.rotateY(.001)
+    parent.rotateZ(.001)
     uniforms.u_time.value += 0.05;
     renderer.render( scene, camera );
     

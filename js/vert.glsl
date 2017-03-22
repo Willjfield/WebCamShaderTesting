@@ -90,7 +90,7 @@ void main()
 	vUv = uv;
 
     float dst = pow(distance(position, vec3(0.,0.,-10.)),u_slider);
-	vec4 mvPosition = modelViewMatrix * vec4( vec3(position.x,position.y,position.z+dst), 1.0 );
+	vec4 mvPosition = modelViewMatrix * vec4( vec3(position.x,position.y,position.z), 1.0 );
 	//vNormal = normalMatrix * normal;
 	vNormal = normal;
 	
