@@ -1,0 +1,9 @@
+#distribution specific
+dist/main*
+
+#node specific
+node_modules
+
+#Editor specific
+.DS_Store
+.idea

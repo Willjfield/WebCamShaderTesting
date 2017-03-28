@@ -2,8 +2,15 @@
 
 varying vec3 vNormal;
 varying vec2 vUv;
+varying vec3 vPosition;
+
 uniform vec2 u_resolution;
 uniform float u_slider;
+uniform vec3 uEyePos;
+// uniform float _amp;
+// uniform float _freq;
+// uniform float _val;
+uniform vec3 _light_pos;
 
 #pragma glslify: snoise3 = require(glsl-noise/simplex/3d);
 #pragma glslify: snoise4 = require(glsl-noise/simplex/4d);
@@ -31,36 +38,48 @@ mat2 rotate2d(float _angle){
                 sin(_angle),cos(_angle));
 }
 
+float map(float value, float inMin, float inMax, float outMin, float outMax) {
+  return outMin + (outMax - outMin) * (value - inMin) / (inMax - inMin);
+}
+
 #define OCTAVES 6
 float fbm (in vec2 st) {
     // Initial values
-    float value = 0.0;
-    float amplitud = .5;
-    float frequency = 0.;
+    float value = 1.;
+    float amplitud = 1.;
+    float frequency = 1.;
     //
     // Loop of octaves
     for (int i = 0; i < OCTAVES; i++) {
-        value += amplitud * snoise3(vec3(st.x,u_time*.025,st.y));
+        value += amplitud * snoise3(vec3(st.x,.015*u_time,st.y))+1.;
         st *= 3.;
-        amplitud *= .5;
+        amplitud *= .4;
     }
     return value;
 }
 
 void main() {
-    vec2 st = vUv;//gl_FragCoord.xy/u_resolution.xy;
+    vec2 st = vUv;
+    float fbm_val = pow(fbm(vec2(fbm(vUv)))*.1,2.);
+    float fbm_val_x = pow(fbm(vec2(fbm(vec2(vUv.x+.1,vUv.y))))*.1,2.);
+    float fbm_val_y = pow(fbm(vec2(fbm(vec2(vUv.x,vUv.y+.1))))*.1,2.);
 
-    float fbm_val = (fbm(vec2(fbm(vUv)))*2.)-1.;
+    vec3 p = vec3(vUv.x,vUv.y,fbm_val*.25);
+    vec3 p1 = vec3(vUv.x+.1,vUv.y,fbm_val_x*.25);
+    vec3 p2 = vec3(vUv.x,vUv.y+.1,fbm_val_y*.25);
 
-    st -= vec2(0.5);
-    // rotate the space
-    st = rotate2d( sin(fbm_val)*3.141592*u_slider ) * st;
-    // move it back to the original place
-    st += vec2(0.5);
-    vec3 light_source = vec3(sin(u_time*.1),0.2,cos(u_time*.1));
-    vec3 camColor = texture2D( colorMap, vec2(st.x,st.y) ).rgb;
-    float diffuse = max((dot(light_source,vNormal)+1.)/2.,.2);
-    gl_FragColor= vec4(vec3(camColor*diffuse),1.);
-    //vec3 imgColor = texture2D(colorMap,vec2(vUv.x,vUv.y)).rgb;
-    //gl_FragColor= vec4(vec3(imgColor),1.);
+    vec3 new_normal = normalize(cross(p1-p,p2-p));
+    vec3 reflection_vector = reflect(normalize(uEyePos),new_normal);
+    float reflect_normal = dot(reflection_vector, normalize(_light_pos-vPosition))+1./2.;
+    reflect_normal = max(reflect_normal,.15);
+   // Dir = (B - A) x (C - A)
+   // Norm = Dir / len(Dir)
+
+    //fbm_val = pow(fbm_val,5.);
+    vec3 color = vec3(st.x,st.y,.5);
+   
+    float specular = 2./distance(_light_pos,vPosition.xyz);
+
+    //specular = pow(specular,2.);
+    gl_FragColor= vec4(vec3(color*specular*reflect_normal),1.);
 }

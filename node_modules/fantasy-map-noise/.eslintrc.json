@@ -1,0 +1,61 @@
+{
+  "extends": "standard",
+  "env":{
+    "browser": true
+  },
+  "parserOptions": {
+    "sourceType": "module"
+  },
+  "root": true,
+  "rules": {
+    "indent": [2, 4],
+    // require or disallow space before blocks (off by default)
+    "space-before-blocks": [2,
+      {
+        "classes": "always",
+        "keywords": "never",
+        "functions": "always"
+      }
+    ],
+    // enforce one true brace style (off by default)
+    "brace-style": [2,"stroustrup",{"allowSingleLine": true}],
+    // enforce padding within blocks (off by default)
+    "padded-blocks": [2,
+      {
+        "blocks": "never",
+        "classes": "always"
+      }
+    ],
+    "space-infix-ops": 2,
+    "space-before-function-paren": [2,
+      {
+        "anonymous": "never",
+        "named": "never"
+      }
+    ],
+    // require or disallow use of semicolons instead of ASI
+    "semi": [2,"always",{"omitLastInOneLineBlock": true}],
+
+    "keyword-spacing": [2,
+      {
+        "before": true,
+        "after": false,
+        "overrides":{
+          "from": {"after": true},
+          "import": {"after": true},
+          "export": {"after": true},
+          "return": {"after": true}
+        }
+      }
+    ],
+    // allow just one var statement per function (off by default)
+    "one-var": 2,
+
+    // disallow mixes of different operators
+    "no-mixed-operators":[0,
+      {
+        "allowSamePrecedence": true
+      }
+    ]
+  }
+}
