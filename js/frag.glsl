@@ -4,6 +4,8 @@ varying vec3 vNormal;
 varying vec2 vUv;
 uniform vec2 u_resolution;
 uniform float u_slider;
+uniform vec3 s_color;
+uniform float u_tolerance;
 
 #pragma glslify: snoise3 = require(glsl-noise/simplex/3d);
 #pragma glslify: snoise4 = require(glsl-noise/simplex/4d);
@@ -50,17 +52,25 @@ float fbm (in vec2 st) {
 void main() {
     vec2 st = vUv;//gl_FragCoord.xy/u_resolution.xy;
 
-    float fbm_val = (fbm(vec2(fbm(vUv)))*2.)-1.;
+    float fbm_val = (fbm(vec2(fbm(vUv)))*2.);
 
-    st -= vec2(0.5);
-    // rotate the space
-    st = rotate2d( sin(fbm_val)*3.141592*u_slider ) * st;
-    // move it back to the original place
-    st += vec2(0.5);
-    vec3 light_source = vec3(sin(u_time*.1),0.2,cos(u_time*.1));
-    vec3 camColor = texture2D( colorMap, vec2(st.x,st.y) ).rgb;
-    float diffuse = max((dot(light_source,vNormal)+1.)/2.,.2);
-    gl_FragColor= vec4(vec3(camColor*diffuse),1.);
-    //vec3 imgColor = texture2D(colorMap,vec2(vUv.x,vUv.y)).rgb;
-    //gl_FragColor= vec4(vec3(imgColor),1.);
+    //vec3 sampleColor = vec3(0.9176,0.70588,0.);
+    vec3 sampleColor = s_color;
+    float tolerance = u_tolerance;
+    st.x+=sin(fbm_val)*.01*u_slider;
+    st.y+=cos(fbm_val)*.01*u_slider;
+    // st -= .5;
+    // st = rotate2d(sin(fbm_val)*.01*u_slider)*st;
+    // st += .5;
+
+    vec3 camColor = texture2D( webcam, vec2(vUv.x,1.-vUv.y) ).rgb;
+    vec3 distortedColor = texture2D( webcam, vec2(st.x,1.-st.y) ).rgb;
+    float distance_from_sample = distance(sampleColor,distortedColor);
+    //camColor = distortedColor*distance_from_sample;
+    //if(distance_from_sample<tolerance){
+        distortedColor = texture2D( webcam, vec2(vUv.x+(distance_from_sample*fbm_val),1.-vUv.y+(distance_from_sample*fbm_val)) ).rgb;
+        camColor = distortedColor;
+    //}
+
+    gl_FragColor= vec4(vec3(camColor),1.);
 }

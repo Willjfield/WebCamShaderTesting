@@ -5,6 +5,7 @@ var THREE = require('three');
 var OrbitControls = require('three-orbit-controls')(THREE);
 var noise = require('fantasy-map-noise');
 
+
 var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
 var controls, renderer;
@@ -65,15 +66,30 @@ function init(_video){
   texture.magFilter = THREE.LinearFilter;
   texture.format = THREE.RGBFormat;
 
-  var gui = new dat.GUI();
+  var gui = new dat.GUI({ autoPlace: true, height: 500 });
   var params = {
     _value: 1,
+    _tolerance: 1,
+    _color : [ 0, 128, 255 ]
   }
 
-  var changingVal = gui.add( params, '_value' ).min(0).max(5).step(0.01).name('_value').listen();
+  var changingVal = gui.add( params, '_value' ).min(0).max(15).step(0.01).name('_value').listen();
   changingVal.onChange(function(value) 
   {   uniforms.u_slider.value = value  });
 
+  var tolerance = gui.add( params, '_tolerance' ).min(0).max(2).step(0.01).name('_tolerance').listen();
+  tolerance.onChange(function(value) 
+  {   uniforms.u_tolerance.value = value  
+      console.log(uniforms.u_tolerance.value)
+  });
+
+  var sampleColor = gui.addColor(params, '_color');
+  sampleColor.onChange(function(value) 
+  {   
+    uniforms.s_color.value = new THREE.Vector3( value[0]/255, value[1]/255, value[2]/255 ); 
+    //console.log(value)
+  });
+  //var changingColor = gui.add( params, '_color' ).name('_color').listen();
 //   var myImage = new THREE.TextureLoader();
   
 //   myImage.addEventListener('load', function(event){
@@ -91,7 +107,9 @@ function init(_video){
 
 
   uniforms = {
-        colorMap: { type: "t", value: new THREE.TextureLoader().load( "./img/PANO_20140530_203049_sm.jpg" ) },
+        u_tolerance: { type: "f", value: 1.0 },
+        s_color: {type: "v3", value: new THREE.Vector3( 1, 1, 1 )},
+        colorMap: { type: "t", value: new THREE.TextureLoader().load( "./img/1024/1024_3.jpg" ) },
         u_slider: { type: "f", value: 1.0 },
         webcam: { type: "t", value: texture},
         u_time: { type: "f", value: 1.0 },
@@ -103,8 +121,8 @@ function init(_video){
 
   
 
-  geometry = new THREE.IcosahedronBufferGeometry(1, 1);
-  //geometry = new THREE.PlaneBufferGeometry( 16, 9, 32 );
+  //geometry = new THREE.IcosahedronBufferGeometry(1, 1);
+  geometry = new THREE.PlaneBufferGeometry( 16, 9, 32 );
   material = new THREE.ShaderMaterial( {
       uniforms: uniforms,
       vertexShader: glslify("./vert.glsl"),
@@ -207,9 +225,9 @@ function render() {
     //   parent.children[s].position.z = noise_value*10;
     // }
 
-    parent.rotateX(.001)
-    parent.rotateY(.001)
-    parent.rotateZ(.001)
+    // parent.rotateX(.001)
+    // parent.rotateY(.001)
+    // parent.rotateZ(.001)
     uniforms.u_time.value += 0.05;
     renderer.render( scene, camera );
     
