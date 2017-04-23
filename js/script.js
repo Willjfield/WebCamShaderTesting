@@ -122,8 +122,8 @@ function init(_video){
     };
 
 
-  //geometry = new THREE.IcosahedronBufferGeometry(1, 3);
-  geometry = new THREE.PlaneBufferGeometry( 16, 9, 32 );
+  geometry = new THREE.IcosahedronBufferGeometry(0, 4);
+  //geometry = new THREE.PlaneBufferGeometry( 16, 9, 32 );
   //geometry = new THREE.CylinderBufferGeometry( 10, 10, 100, 64, 1, true );
 material = new THREE.ShaderMaterial( {
       uniforms: uniforms,

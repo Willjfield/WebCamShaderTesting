@@ -43,7 +43,7 @@ float map(float value, float inMin, float inMax, float outMin, float outMax) {
 }
 
 #define OCTAVES 6
-float fbm (in vec2 st) {
+float fbm (in vec3 st) {
     // Initial values
     float value = 1.;
     float amplitud = 1.;
@@ -51,7 +51,7 @@ float fbm (in vec2 st) {
     //
     // Loop of octaves
     for (int i = 0; i < OCTAVES; i++) {
-        value += amplitud * snoise3(vec3(st.x,.015*u_time,st.y))+1.;
+        value += amplitud * snoise4(vec4(st.xyz,.07*u_time))+1.;
         st *= 3.;
         amplitud *= .4;
     }
@@ -59,27 +59,35 @@ float fbm (in vec2 st) {
 }
 
 void main() {
-    vec2 st = vUv;
-    float fbm_val = pow(fbm(vec2(fbm(vUv)))*.1,2.);
-    float fbm_val_x = pow(fbm(vec2(fbm(vec2(vUv.x+.1,vUv.y))))*.1,2.);
-    float fbm_val_y = pow(fbm(vec2(fbm(vec2(vUv.x,vUv.y+.1))))*.1,2.);
+    vec2 st = vec2(vPosition.xy);
+    float fbm_val = pow(fbm(vec3(fbm(vPosition)))*.1,2.);
+    float fbm_val_x = pow(fbm(vec3(fbm(vec3(vPosition.x+.1,vPosition.y, vPosition.z))))*.1,2.);
+    float fbm_val_y = pow(fbm(vec3(fbm(vec3(vPosition.x,vPosition.y+.1, vPosition.z))))*.1,2.);
 
-    vec3 p = vec3(vUv.x,vUv.y,fbm_val*.25);
-    vec3 p1 = vec3(vUv.x+.1,vUv.y,fbm_val_x*.25);
-    vec3 p2 = vec3(vUv.x,vUv.y+.1,fbm_val_y*.25);
+    // vec3 p = vec3(vUv.x,vUv.y,fbm_val*.25);
+    // vec3 p1 = vec3(vUv.x+.1,vUv.y,fbm_val_x*.25);
+    // vec3 p2 = vec3(vUv.x,vUv.y+.1,fbm_val_y*.25);
+
+    vec3 p = vec3(vPosition.x,vPosition.y,vPosition.z+fbm_val*.25);
+    vec3 p1 = vec3(vPosition.x+.1,vPosition.y,vPosition.z+fbm_val_x*.25);
+    vec3 p2 = vec3(vPosition.x,vPosition.y+.1,vPosition.z+fbm_val_y*.25);
 
     vec3 new_normal = normalize(cross(p1-p,p2-p));
+    new_normal = (new_normal+1.)/2.;
     vec3 reflection_vector = reflect(normalize(uEyePos),new_normal);
-    float reflect_normal = dot(reflection_vector, normalize(_light_pos-vPosition))+1./2.;
+    float reflect_normal = (dot(reflection_vector, normalize(_light_pos-vPosition))+1.)/2.;
     reflect_normal = max(reflect_normal,.15);
    // Dir = (B - A) x (C - A)
    // Norm = Dir / len(Dir)
 
     //fbm_val = pow(fbm_val,5.);
-    vec3 color = vec3(st.x,st.y,.5);
-   
+    vec3 color = vec3(new_normal*reflect_normal);
+    color*=color;
+    color.b*=.2;
+    color.g*=.6;
+    //color = max(color,.15);
     float specular = 2./distance(_light_pos,vPosition.xyz);
 
     //specular = pow(specular,2.);
-    gl_FragColor= vec4(vec3(color*specular*reflect_normal),1.);
+    gl_FragColor= vec4(vec3(color*specular),1.);
 }
